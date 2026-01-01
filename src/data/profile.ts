@@ -1,9 +1,10 @@
 export const profile = {
-  name: 'Hyeonmin',
+  name: 'Hyeonmin Lee',
+  nickname: 'addniner',
   title: 'Full-Stack Developer',
   bio: 'Building beautiful and functional web experiences.',
   location: 'Seoul, South Korea',
-  email: 'hello@addniner.dev',
+  email: 'addniner@gmail.com',
   github: 'https://github.com/addniner',
   linkedin: 'https://linkedin.com/in/addniner',
   skills: [
