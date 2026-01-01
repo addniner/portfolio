@@ -39,7 +39,7 @@ interface PinnedRepo {
   defaultBranchRef: { name: string } | null;
 }
 
-function convertImagePaths(
+function convertRelativePaths(
   markdown: string,
   owner: string,
   repo: string,
@@ -47,26 +47,42 @@ function convertImagePaths(
 ): string {
   const baseUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`;
 
+  const toAbsolute = (path: string) =>
+    path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+
+  // Skip if already absolute URL or anchor link
+  const isRelative = (path: string) =>
+    !path.startsWith('http://') &&
+    !path.startsWith('https://') &&
+    !path.startsWith('#') &&
+    !path.startsWith('mailto:');
+
+  let result = markdown;
+
   // Convert markdown image syntax: ![alt](path)
-  let result = markdown.replace(
-    /!\[([^\]]*)\]\((?!https?:\/\/)([^)]+)\)/g,
-    (_, alt, imgPath) => {
-      const absolutePath = imgPath.startsWith('/')
-        ? `${baseUrl}${imgPath}`
-        : `${baseUrl}/${imgPath}`;
-      return `![${alt}](${absolutePath})`;
-    }
+  result = result.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (match, alt, path) => (isRelative(path) ? `![${alt}](${toAbsolute(path)})` : match)
+  );
+
+  // Convert markdown link syntax: [text](path) - for files like PDFs
+  result = result.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (match, text, path) => (isRelative(path) ? `[${text}](${toAbsolute(path)})` : match)
   );
 
   // Convert HTML img tags: <img src="path" ...>
   result = result.replace(
-    /<img\s+([^>]*?)src=["'](?!https?:\/\/)([^"']+)["']([^>]*)>/gi,
-    (_, before, imgPath, after) => {
-      const absolutePath = imgPath.startsWith('/')
-        ? `${baseUrl}${imgPath}`
-        : `${baseUrl}/${imgPath}`;
-      return `<img ${before}src="${absolutePath}"${after}>`;
-    }
+    /<img\s+([^>]*?)src=["']([^"']+)["']([^>]*)>/gi,
+    (match, before, path, after) =>
+      isRelative(path) ? `<img ${before}src="${toAbsolute(path)}"${after}>` : match
+  );
+
+  // Convert HTML anchor tags: <a href="path" ...>
+  result = result.replace(
+    /<a\s+([^>]*?)href=["']([^"']+)["']([^>]*)>/gi,
+    (match, before, path, after) =>
+      isRelative(path) ? `<a ${before}href="${toAbsolute(path)}"${after}>` : match
   );
 
   return result;
@@ -135,7 +151,7 @@ async function fetchProjects() {
 
         const content = Buffer.from(readmeData.content, 'base64').toString('utf-8');
         const branch = repo.defaultBranchRef?.name || 'main';
-        readme = convertImagePaths(content, username, repo.name, branch);
+        readme = convertRelativePaths(content, username, repo.name, branch);
       } catch {
         console.log(`    ⚠️  No README found for ${repo.name}`);
         readme = `# ${repo.name}\n\n${repo.description || 'No description available.'}`;
