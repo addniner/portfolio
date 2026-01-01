@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { cn } from '@/utils/cn';
 import { CodeBlock } from './CodeBlock';
 
@@ -55,6 +56,7 @@ export function MarkdownRenderer({ content, streaming = true }: MarkdownRenderer
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
