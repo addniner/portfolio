@@ -24,6 +24,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Update repo metadata
+        run: |
+          gh repo edit \
+            --description "CLI-style interactive portfolio site" \
+            --homepage "https://addniner.github.io/portfolio/" \
+            --add-topic "portfolio" \
+            --add-topic "react" \
+            --add-topic "typescript" \
+            --add-topic "xterm"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
