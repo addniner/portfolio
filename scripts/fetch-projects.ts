@@ -47,15 +47,19 @@ function convertRelativePaths(
 ): string {
   const baseUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`;
 
-  const toAbsolute = (path: string) =>
-    path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
+  const toAbsolute = (path: string) => {
+    // Remove leading ./ if present
+    const cleanPath = path.startsWith('./') ? path.slice(2) : path;
+    return cleanPath.startsWith('/') ? `${baseUrl}${cleanPath}` : `${baseUrl}/${cleanPath}`;
+  };
 
   // Skip if already absolute URL or anchor link
   const isRelative = (path: string) =>
     !path.startsWith('http://') &&
     !path.startsWith('https://') &&
     !path.startsWith('#') &&
-    !path.startsWith('mailto:');
+    !path.startsWith('mailto:') &&
+    !path.startsWith('data:');
 
   let result = markdown;
 
