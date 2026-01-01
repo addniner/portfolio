@@ -24,6 +24,21 @@ interface ProjectsData {
   projects: Record<string, Project>;
 }
 
+interface PinnedRepo {
+  name: string;
+  description: string | null;
+  stargazerCount: number;
+  forkCount: number;
+  primaryLanguage: { name: string } | null;
+  url: string;
+  homepageUrl: string | null;
+  updatedAt: string;
+  repositoryTopics: {
+    nodes: Array<{ topic: { name: string } }>;
+  };
+  defaultBranchRef: { name: string } | null;
+}
+
 function convertImagePaths(
   markdown: string,
   owner: string,
@@ -51,28 +66,49 @@ async function fetchProjects() {
     return;
   }
 
-  console.log(`📦 Fetching projects for ${username}...`);
+  console.log(`📦 Fetching pinned projects for ${username}...`);
 
   const octokit = new Octokit({ auth: token });
 
   try {
-    // Fetch all repos
-    const { data: repos } = await octokit.repos.listForUser({
-      username,
-      sort: 'updated',
-      per_page: 100,
-    });
+    // Fetch pinned repos using GraphQL
+    const { user } = await octokit.graphql<{
+      user: {
+        pinnedItems: {
+          nodes: PinnedRepo[];
+        };
+      };
+    }>(`
+      query($username: String!) {
+        user(login: $username) {
+          pinnedItems(first: 6, types: REPOSITORY) {
+            nodes {
+              ... on Repository {
+                name
+                description
+                stargazerCount
+                forkCount
+                primaryLanguage { name }
+                url
+                homepageUrl
+                updatedAt
+                repositoryTopics(first: 10) {
+                  nodes { topic { name } }
+                }
+                defaultBranchRef { name }
+              }
+            }
+          }
+        }
+      }
+    `, { username });
 
-    // Filter repos with 'portfolio' topic
-    const portfolioRepos = repos.filter(
-      (repo) => repo.topics?.includes('portfolio') && !repo.fork
-    );
-
-    console.log(`📂 Found ${portfolioRepos.length} portfolio projects`);
+    const pinnedRepos = user.pinnedItems.nodes;
+    console.log(`📌 Found ${pinnedRepos.length} pinned projects`);
 
     const projects: Record<string, Project> = {};
 
-    for (const repo of portfolioRepos) {
+    for (const repo of pinnedRepos) {
       console.log(`  → Fetching ${repo.name}...`);
 
       let readme = '';
@@ -83,7 +119,8 @@ async function fetchProjects() {
         });
 
         const content = Buffer.from(readmeData.content, 'base64').toString('utf-8');
-        readme = convertImagePaths(content, username, repo.name, repo.default_branch);
+        const branch = repo.defaultBranchRef?.name || 'main';
+        readme = convertImagePaths(content, username, repo.name, branch);
       } catch {
         console.log(`    ⚠️  No README found for ${repo.name}`);
         readme = `# ${repo.name}\n\n${repo.description || 'No description available.'}`;
@@ -93,13 +130,13 @@ async function fetchProjects() {
         name: repo.name,
         description: repo.description,
         readme,
-        stars: repo.stargazers_count || 0,
-        forks: repo.forks_count || 0,
-        language: repo.language,
-        url: repo.html_url,
-        homepage: repo.homepage || null,
-        updated_at: repo.updated_at || new Date().toISOString(),
-        topics: repo.topics || [],
+        stars: repo.stargazerCount,
+        forks: repo.forkCount,
+        language: repo.primaryLanguage?.name || null,
+        url: repo.url,
+        homepage: repo.homepageUrl || null,
+        updated_at: repo.updatedAt,
+        topics: repo.repositoryTopics.nodes.map(n => n.topic.name),
       };
     }
 
