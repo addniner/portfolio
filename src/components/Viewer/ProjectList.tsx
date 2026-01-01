@@ -2,6 +2,7 @@ import { useTerminalContext } from '@/context/TerminalContext';
 import { getProjects } from '@/data';
 import { Star, GitFork } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { ViewerNav } from './ViewerNav';
 
 interface ProjectListProps {
   detailed: boolean;
@@ -12,7 +13,9 @@ export function ProjectList({ detailed }: ProjectListProps) {
   const projects = getProjects();
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className="h-full flex flex-col">
+      <ViewerNav current="projects" />
+      <div className="flex-1 overflow-y-auto p-6">
       <h2 className="text-2xl font-bold text-dracula-fg mb-6">Projects</h2>
 
       <div className={cn(
@@ -73,6 +76,7 @@ export function ProjectList({ detailed }: ProjectListProps) {
             )}
           </button>
         ))}
+      </div>
       </div>
     </div>
   );

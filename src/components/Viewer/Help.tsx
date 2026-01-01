@@ -1,6 +1,7 @@
 import { useTerminalContext } from '@/context/TerminalContext';
 import { Terminal, Folder, FileText, FolderOpen, ExternalLink, User, Trash2, History, Keyboard } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { ViewerNav } from './ViewerNav';
 
 const commands = [
   { cmd: 'help', desc: 'Show this help message', icon: Terminal },
@@ -23,7 +24,9 @@ export function Help() {
   const { executeCommand } = useTerminalContext();
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className="h-full flex flex-col">
+      <ViewerNav current="help" />
+      <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center">
@@ -113,6 +116,7 @@ export function Help() {
             ))}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

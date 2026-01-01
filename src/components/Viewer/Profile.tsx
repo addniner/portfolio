@@ -1,10 +1,13 @@
 import { profile } from '@/data';
 import { Mail, Github, Linkedin, MapPin } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { ViewerNav } from './ViewerNav';
 
 export function Profile() {
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className="h-full flex flex-col">
+      <ViewerNav current="profile" />
+      <div className="flex-1 overflow-y-auto p-6">
       {/* ASCII Art Name */}
       <pre className="text-dracula-green text-xs md:text-sm font-mono mb-8 overflow-x-auto">
         {profile.ascii}
@@ -92,6 +95,7 @@ export function Profile() {
             LinkedIn
           </a>
         </div>
+      </div>
       </div>
     </div>
   );
