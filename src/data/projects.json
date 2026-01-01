@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-01-01T00:00:00Z",
+  "projects": {
+    "portfolio": {
+      "name": "portfolio",
+      "description": "CLI-style portfolio website with dual-panel layout",
+      "readme": "# Portfolio\n\nA CLI-style portfolio website built with React and TypeScript.\n\n## Features\n\n- **Dual Panel Layout**: Terminal on the left, content viewer on the right\n- **CLI Commands**: Navigate using familiar terminal commands\n- **Zero Network Latency**: All data is pre-fetched at build time\n- **Responsive Design**: Works on desktop, tablet, and mobile\n\n## Commands\n\n```bash\nhelp      # Show available commands\nls [-l]   # List all projects\ncat <name> # Show project README\nwhoami    # Display profile information\nopen      # Open project in GitHub\nclear     # Clear terminal\nhistory   # Show command history\n```\n\n## Tech Stack\n\n- React 19 + TypeScript\n- Vite\n- Tailwind CSS\n- Motion (Framer Motion)\n\n## Getting Started\n\n```bash\npnpm install\npnpm dev\n```",
+      "stars": 42,
+      "forks": 8,
+      "language": "TypeScript",
+      "url": "https://github.com/addniner/portfolio",
+      "homepage": "https://addniner.dev",
+      "updated_at": "2026-01-01T00:00:00Z",
+      "topics": ["portfolio", "react", "typescript", "cli"]
+    },
+    "react-hooks-kit": {
+      "name": "react-hooks-kit",
+      "description": "A collection of useful React hooks for common use cases",
+      "readme": "# React Hooks Kit\n\nA collection of production-ready React hooks.\n\n## Installation\n\n```bash\nnpm install react-hooks-kit\n```\n\n## Available Hooks\n\n### useLocalStorage\n\nPersist state to localStorage with automatic serialization.\n\n```tsx\nconst [value, setValue] = useLocalStorage('key', defaultValue);\n```\n\n### useDebounce\n\nDebounce rapidly changing values.\n\n```tsx\nconst debouncedValue = useDebounce(value, 300);\n```\n\n### useClickOutside\n\nDetect clicks outside of a component.\n\n```tsx\nconst ref = useClickOutside(() => setOpen(false));\n```\n\n## License\n\nMIT",
+      "stars": 128,
+      "forks": 23,
+      "language": "TypeScript",
+      "url": "https://github.com/addniner/react-hooks-kit",
+      "homepage": null,
+      "updated_at": "2025-12-15T10:30:00Z",
+      "topics": ["react", "hooks", "typescript", "npm-package"]
+    },
+    "cli-weather": {
+      "name": "cli-weather",
+      "description": "Beautiful weather forecasts in your terminal",
+      "readme": "# CLI Weather\n\nGet weather forecasts right in your terminal with beautiful ASCII art.\n\n## Installation\n\n```bash\nnpm install -g cli-weather\n```\n\n## Usage\n\n```bash\n# Current weather\nweather\n\n# Weather for a specific city\nweather seoul\n\n# 7-day forecast\nweather --forecast 7\n```\n\n## Features\n\n- Current conditions with temperature, humidity, wind\n- Multi-day forecasts\n- ASCII weather icons\n- Supports multiple units (Celsius/Fahrenheit)\n- Caches results for faster response\n\n## Configuration\n\nCreate `~/.weatherrc` to set defaults:\n\n```json\n{\n  \"units\": \"metric\",\n  \"defaultCity\": \"Seoul\"\n}\n```",
+      "stars": 89,
+      "forks": 12,
+      "language": "JavaScript",
+      "url": "https://github.com/addniner/cli-weather",
+      "homepage": null,
+      "updated_at": "2025-11-20T14:00:00Z",
+      "topics": ["cli", "weather", "terminal", "nodejs"]
+    }
+  }
+}
