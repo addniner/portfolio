@@ -46,7 +46,9 @@ function convertImagePaths(
   branch = 'main'
 ): string {
   const baseUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`;
-  return markdown.replace(
+
+  // Convert markdown image syntax: ![alt](path)
+  let result = markdown.replace(
     /!\[([^\]]*)\]\((?!https?:\/\/)([^)]+)\)/g,
     (_, alt, imgPath) => {
       const absolutePath = imgPath.startsWith('/')
@@ -55,6 +57,19 @@ function convertImagePaths(
       return `![${alt}](${absolutePath})`;
     }
   );
+
+  // Convert HTML img tags: <img src="path" ...>
+  result = result.replace(
+    /<img\s+([^>]*?)src=["'](?!https?:\/\/)([^"']+)["']([^>]*)>/gi,
+    (_, before, imgPath, after) => {
+      const absolutePath = imgPath.startsWith('/')
+        ? `${baseUrl}${imgPath}`
+        : `${baseUrl}/${imgPath}`;
+      return `<img ${before}src="${absolutePath}"${after}>`;
+    }
+  );
+
+  return result;
 }
 
 async function fetchProjects() {
