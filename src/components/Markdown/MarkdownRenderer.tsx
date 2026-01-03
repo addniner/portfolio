@@ -1,66 +1,47 @@
-import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 import { CodeBlock } from './CodeBlock';
 
 interface MarkdownRendererProps {
   content: string;
-  streaming?: boolean;
 }
 
-export function MarkdownRenderer({ content, streaming = true }: MarkdownRendererProps) {
-  const [displayedContent, setDisplayedContent] = useState(streaming ? '' : content);
-
-  useEffect(() => {
-    if (!streaming) {
-      setDisplayedContent(content);
-      return;
-    }
-
-    let cancelled = false;
-    setDisplayedContent('');
-    const lines = content.split('\n');
-    let currentLine = 0;
-
-    const timer = setInterval(() => {
-      if (cancelled) {
-        clearInterval(timer);
-        return;
-      }
-      if (currentLine < lines.length) {
-        const line = lines[currentLine] ?? '';
-        setDisplayedContent((prev) => prev + (currentLine > 0 ? '\n' : '') + line);
-        currentLine++;
-      } else {
-        clearInterval(timer);
-      }
-    }, 10);
-
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [content, streaming]);
-
+export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
     <div
       className={cn(
-        'prose prose-invert max-w-none',
-        'prose-headings:text-dracula-fg prose-headings:font-bold',
-        'prose-h1:text-2xl prose-h1:border-b prose-h1:border-dracula-current prose-h1:pb-2',
-        'prose-h2:text-xl prose-h2:text-dracula-purple',
-        'prose-h3:text-lg prose-h3:text-dracula-cyan',
-        'prose-p:text-dracula-fg/90',
-        'prose-a:text-dracula-pink prose-a:no-underline hover:prose-a:underline',
-        'prose-strong:text-dracula-orange',
-        'prose-code:text-dracula-green prose-code:bg-dracula-current prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none',
+        // Base prose with theme support
+        'prose max-w-none',
+        'dark:prose-invert',
+
+        // Headings
+        'prose-headings:text-foreground prose-headings:font-bold',
+        'prose-h1:text-2xl prose-h1:border-b prose-h1:border-border prose-h1:pb-2',
+        'prose-h2:text-xl prose-h2:text-primary',
+        'prose-h3:text-lg prose-h3:text-info',
+
+        // Paragraphs and text
+        'prose-p:text-foreground/90',
+        'prose-strong:text-warning',
+
+        // Links
+        'prose-a:text-primary prose-a:no-underline hover:prose-a:underline hover:prose-a:text-primary/80',
+
+        // Code
+        'prose-code:text-success prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none',
         'prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0',
-        'prose-ul:text-dracula-fg/90 prose-ol:text-dracula-fg/90',
-        'prose-li:marker:text-dracula-purple',
-        'prose-blockquote:border-l-dracula-purple prose-blockquote:text-dracula-comment',
-        'prose-hr:border-dracula-current'
+
+        // Lists
+        'prose-ul:text-foreground/90 prose-ol:text-foreground/90',
+        'prose-li:marker:text-primary',
+
+        // Blockquote
+        'prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground',
+
+        // Horizontal rule
+        'prose-hr:border-border'
       )}
     >
       <ReactMarkdown
@@ -88,7 +69,7 @@ export function MarkdownRenderer({ content, streaming = true }: MarkdownRenderer
           },
         }}
       >
-        {displayedContent}
+        {content}
       </ReactMarkdown>
     </div>
   );

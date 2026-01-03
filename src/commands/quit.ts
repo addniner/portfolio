@@ -4,21 +4,13 @@ export const quitCommand: CommandDefinition = {
   name: ':q',
   description: 'Close vim editor',
   usage: ':q',
-  execute: (_args, _flags, context): CommandResult => {
+  execute: (_args, _flags, _context): CommandResult => {
     // This command is handled specially in vim mode
-    // If called outside vim mode, show error
-    if (context.previousState?.type !== 'vim') {
-      return {
-        type: 'error',
-        output: 'E492: Not an editor command: q',
-      };
-    }
-
-    // Return to directory view and exit vim mode
+    // :q is only valid in vim mode, otherwise show error
+    // Note: vim mode is handled in XTerminal.tsx, this is just for completeness
     return {
-      type: 'silent',
-      viewerState: { type: 'directory', path: context.cwd },
-      vimMode: null,
+      type: 'error',
+      output: 'E492: Not an editor command: q',
     };
   },
 };

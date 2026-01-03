@@ -182,7 +182,7 @@ test.describe('Terminal Commands', () => {
     // Terminal title should show vim
     await expect(page.getByText('vim - about.md')).toBeVisible();
 
-    // Viewer should show VimViewer with file content
-    await expect(page.getByText('Hyeonmin Lee')).toBeVisible();
+    // Viewer should show VimViewer with file content (use heading role to be specific)
+    await expect(page.getByRole('heading', { name: 'Hyeonmin Lee' })).toBeVisible();
   });
 });

@@ -1,4 +1,5 @@
 import { TerminalProvider } from '@/context/TerminalContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { DualPanel } from '@/components/Layout/DualPanel';
 import { XTerminal } from '@/components/Terminal/XTerminal';
 import { Viewer } from '@/components/Viewer/Viewer';
@@ -21,9 +22,11 @@ function AppContent() {
 
 function App() {
   return (
-    <TerminalProvider>
-      <AppContent />
-    </TerminalProvider>
+    <ThemeProvider>
+      <TerminalProvider>
+        <AppContent />
+      </TerminalProvider>
+    </ThemeProvider>
   );
 }
 

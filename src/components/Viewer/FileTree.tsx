@@ -1,0 +1,226 @@
+import { useState, useMemo, useEffect } from 'react';
+import { ChevronRight, Folder, FileText, ExternalLink, Home, User, FolderKanban } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { getFilesystem, type FSNode } from '@/data/filesystem';
+import { useTerminalContext } from '@/context/TerminalContext';
+import { cmd } from '@/lib/commands';
+
+interface FileTreeProps {
+  currentPath: string;
+}
+
+// Folder colors for specific folders
+const FOLDER_ICON_COLORS: Record<string, string> = {
+  home: 'text-blue-400',
+  guest: 'text-blue-400',
+  hyeonmin: 'text-purple-400',
+  projects: 'text-green-400',
+};
+
+interface TreeNodeProps {
+  node: FSNode;
+  path: string;
+  currentPath: string;
+  depth: number;
+  defaultExpanded?: boolean;
+}
+
+function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: TreeNodeProps) {
+  const { executeCommand } = useTerminalContext();
+  const isInPath = currentPath === path || currentPath.startsWith(path + '/');
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded || isInPath);
+
+  const isDirectory = node.type === 'directory' || node.type === 'symlink';
+  const isSymlink = node.type === 'symlink';
+  const isActive = currentPath === path;
+
+  // Auto-expand if current path is inside this directory
+  useEffect(() => {
+    if (isInPath && !isExpanded) {
+      setIsExpanded(true);
+    }
+  }, [isInPath, isExpanded]);
+
+  const handleClick = () => {
+    if (isDirectory) {
+      executeCommand(cmd.chain(cmd.cd(path), cmd.ls()));
+    } else {
+      executeCommand(cmd.vim(path));
+    }
+  };
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
+
+  // Get visible children (exclude hidden files)
+  const children = useMemo(() => {
+    if (!node.children) return [];
+    return Object.entries(node.children)
+      .filter(([name]) => !name.startsWith('.'))
+      .sort(([, a], [, b]) => {
+        const aIsDir = a.type === 'directory' || a.type === 'symlink';
+        const bIsDir = b.type === 'directory' || b.type === 'symlink';
+        if (aIsDir && !bIsDir) return -1;
+        if (!aIsDir && bIsDir) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }, [node.children]);
+
+  const iconColor = FOLDER_ICON_COLORS[node.name] || '';
+
+  return (
+    <div>
+      <button
+        onClick={handleClick}
+        className={cn(
+          'w-full flex items-center gap-2 py-1.5 px-3 rounded-lg text-sm',
+          'transition-all duration-200',
+          isActive
+            ? 'bg-accent text-foreground font-medium'
+            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+        )}
+        style={{ paddingLeft: `${depth * 16 + 12}px` }}
+      >
+        {/* Expand/Collapse toggle */}
+        {isDirectory && children.length > 0 ? (
+          <span
+            onClick={handleToggle}
+            className="p-0.5 -ml-1 hover:bg-accent rounded"
+          >
+            <ChevronRight
+              className={cn(
+                'w-3 h-3 transition-transform duration-200',
+                isExpanded && 'rotate-90'
+              )}
+            />
+          </span>
+        ) : (
+          <span className="w-4" />
+        )}
+
+        {/* Icon */}
+        {isDirectory ? (
+          <Folder className={cn('w-4 h-4 shrink-0', isActive || isInPath ? iconColor : '')} />
+        ) : (
+          <FileText className={cn(
+            'w-4 h-4 shrink-0',
+            isActive ? 'text-green-400' : ''
+          )} />
+        )}
+
+        {/* Name */}
+        <span className="truncate">{node.name}</span>
+
+        {/* Symlink indicator */}
+        {isSymlink && (
+          <ExternalLink className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+        )}
+      </button>
+
+      {/* Children */}
+      {isDirectory && isExpanded && children.length > 0 && (
+        <div className="relative">
+          {/* Indent guide line */}
+          <div
+            className="absolute top-0 bottom-0 w-px bg-border/50"
+            style={{ left: `${depth * 16 + 20}px` }}
+          />
+          {children.map(([name, childNode]) => (
+            <TreeNode
+              key={name}
+              node={childNode}
+              path={`${path}/${name}`}
+              currentPath={currentPath}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function FileTree({ currentPath }: FileTreeProps) {
+  const { executeCommand } = useTerminalContext();
+  const fs = getFilesystem();
+
+  // Start from root, but expand home/guest by default
+  const rootChildren = useMemo(() => {
+    if (!fs.children) return [];
+    return Object.entries(fs.children)
+      .filter(([name]) => !name.startsWith('.'))
+      .sort(([, a], [, b]) => {
+        const aIsDir = a.type === 'directory' || a.type === 'symlink';
+        const bIsDir = b.type === 'directory' || b.type === 'symlink';
+        if (aIsDir && !bIsDir) return -1;
+        if (!aIsDir && bIsDir) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }, [fs.children]);
+
+  const handleQuickNav = (path: string) => {
+    executeCommand(cmd.chain(cmd.cd(path), cmd.ls()));
+  };
+
+  // Quick access items
+  const quickItems = [
+    { label: 'Home', icon: Home, path: '~', color: 'text-blue-400' },
+    { label: 'hyeonmin', icon: User, path: '/home/hyeonmin', color: 'text-purple-400' },
+    { label: 'Projects', icon: FolderKanban, path: '/home/hyeonmin/projects', color: 'text-green-400' },
+  ];
+
+  const isActivePath = (itemPath: string) => {
+    const normalizedPath = currentPath.replace('/home/guest', '~');
+    return normalizedPath === itemPath || currentPath === itemPath;
+  };
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Favorites Section */}
+      <div className="px-3 py-2">
+        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Favorites
+        </div>
+        {quickItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = isActivePath(item.path);
+          return (
+            <button
+              key={item.path}
+              onClick={() => handleQuickNav(item.path)}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium',
+                'transition-all duration-200',
+                isActive
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+              )}
+            >
+              <Icon className={cn('w-4 h-4', isActive ? item.color : '')} />
+              <span className="truncate">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* File Tree Section */}
+      <div className="px-3 py-2 flex-1 overflow-y-auto">
+        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Files
+        </div>
+        {rootChildren.map(([name, node]) => (
+          <TreeNode
+            key={name}
+            node={node}
+            path={`/${name}`}
+            currentPath={currentPath}
+            depth={0}
+            defaultExpanded={name === 'home'}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

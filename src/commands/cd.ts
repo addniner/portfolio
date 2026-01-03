@@ -13,7 +13,7 @@ export const cdCommand: CommandDefinition = {
       const homePath = '/home/guest';
       return {
         type: 'silent',
-        viewerState: { type: 'directory', path: homePath },
+        viewerState: homePath,
         newCwd: homePath,
         urlPath: '/',
       };
@@ -56,7 +56,7 @@ export const cdCommand: CommandDefinition = {
 
     return {
       type: 'silent',
-      viewerState: { type: 'directory', path: actualPath },
+      viewerState: actualPath,
       newCwd: actualPath,
       urlPath,
     };

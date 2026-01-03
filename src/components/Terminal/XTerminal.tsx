@@ -3,38 +3,13 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { useTerminalContext } from '@/context/TerminalContext';
-import { parseCommands } from '@/utils/commandParser';
+import { parseCommands } from '@/lib/commandParser';
 import { executeCommand as runCommand } from '@/commands';
 import { getCompletions, createContext, MenuComplete } from '@/completions';
 import { TerminalLineBuffer } from './TerminalLineBuffer';
 import { TerminalRenderer } from './TerminalRenderer';
 import { getBasename } from '@/data/filesystem';
-
-// Dracula theme for xterm
-const draculaTheme = {
-  background: '#282a36',
-  foreground: '#f8f8f2',
-  cursor: '#50fa7b',
-  cursorAccent: '#282a36',
-  selectionBackground: '#44475a',
-  selectionForeground: '#f8f8f2',
-  black: '#21222c',
-  red: '#ff5555',
-  green: '#50fa7b',
-  yellow: '#f1fa8c',
-  blue: '#bd93f9',
-  magenta: '#ff79c6',
-  cyan: '#8be9fd',
-  white: '#f8f8f2',
-  brightBlack: '#6272a4',
-  brightRed: '#ff6e6e',
-  brightGreen: '#69ff94',
-  brightYellow: '#ffffa5',
-  brightBlue: '#d6acff',
-  brightMagenta: '#ff92df',
-  brightCyan: '#a4ffff',
-  brightWhite: '#ffffff',
-};
+import { DRACULA_THEME } from '@/config/terminal';
 
 // Vim mode state for xterm
 interface VimState {
@@ -61,11 +36,11 @@ export function XTerminal() {
   const vimStateRef = useRef<VimState | null>(null);
   const shellDataHandlerRef = useRef<((data: string) => void) | null>(null);
 
-  const { state, setViewerState, setCurrentProject, setCwd, setVimMode, registerExecuteCommand } = useTerminalContext();
+  const { state, setViewerPath, setCurrentProject, setCwd, setVimMode, registerExecuteCommand, toggleTerminal } = useTerminalContext();
 
   // Keep refs updated for use in callbacks
   const stateRef = useRef(state);
-  const setViewerStateRef = useRef(setViewerState);
+  const setViewerPathRef = useRef(setViewerPath);
   const setCurrentProjectRef = useRef(setCurrentProject);
   const setCwdRef = useRef(setCwd);
   const setVimModeRef = useRef(setVimMode);
@@ -77,12 +52,12 @@ export function XTerminal() {
   }, [state]);
 
   useEffect(() => {
-    setViewerStateRef.current = setViewerState;
+    setViewerPathRef.current = setViewerPath;
     setCurrentProjectRef.current = setCurrentProject;
     setCwdRef.current = setCwd;
     setVimModeRef.current = setVimMode;
     registerExecuteCommandRef.current = registerExecuteCommand;
-  }, [setViewerState, setCurrentProject, setCwd, setVimMode, registerExecuteCommand]);
+  }, [setViewerPath, setCurrentProject, setCwd, setVimMode, registerExecuteCommand]);
 
   // Handle terminal visibility changes - fit terminal when it becomes visible
   useEffect(() => {
@@ -115,7 +90,7 @@ export function XTerminal() {
 
     // Create terminal
     const term = new Terminal({
-      theme: draculaTheme,
+      theme: DRACULA_THEME,
       fontFamily: '"JetBrains Mono", monospace',
       fontSize: 14,
       lineHeight: 1.2,
@@ -277,7 +252,7 @@ export function XTerminal() {
 
       // Update state
       setVimModeRef.current(null);
-      setViewerStateRef.current({ type: 'directory', path: stateRef.current.cwd });
+      setViewerPathRef.current(stateRef.current.cwd);
     };
 
     // Handle vim input
@@ -536,7 +511,7 @@ export function XTerminal() {
         const result = runCommand(parsed, {
           cwd: currentCwd,
           currentProject: currentProjectRef.current,
-          previousState: stateRef.current.viewerState,
+          previousState: stateRef.current.viewerPath,
           getHistory: () => lineBuffer.getHistory(),
         });
 
@@ -585,7 +560,7 @@ export function XTerminal() {
         }
 
         if (lastViewerState) {
-          setViewerStateRef.current(lastViewerState);
+          setViewerPathRef.current(lastViewerState);
         }
 
         // Handle vim mode - enter vim in xterm
@@ -949,23 +924,32 @@ export function XTerminal() {
   }, [state.vimMode]);
 
   return (
-    <div className="h-full flex flex-col bg-dracula-bg">
+    <div className="h-full flex flex-col">
       {/* Window Chrome */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-dracula-current/50">
+      <div className="flex items-center gap-2 px-4 py-3 bg-dracula-current/30 border-b border-white/5">
         <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-dracula-red" />
+          <button
+            onClick={toggleTerminal}
+            className="w-3 h-3 rounded-full bg-dracula-red hover:brightness-110 transition-all"
+            aria-label="Close terminal"
+            title="Close"
+          />
           <div className="w-3 h-3 rounded-full bg-dracula-yellow" />
           <div className="w-3 h-3 rounded-full bg-dracula-green" />
         </div>
-        <span className="text-dracula-comment text-xs ml-2">
-          {state.vimMode ? `vim - ${getBasename(state.vimMode.filePath)}` : 'terminal'}
-        </span>
+        <div className="flex-1 flex items-center justify-center">
+          <span className="text-dracula-comment text-xs">
+            {state.vimMode ? `vim - ${getBasename(state.vimMode.filePath)}` : 'terminal'}
+          </span>
+        </div>
+        {/* Spacer for symmetry */}
+        <div className="w-14" />
       </div>
 
       {/* Terminal Container */}
       <div
         ref={terminalRef}
-        className="flex-1 px-4 py-2"
+        className="flex-1 px-4 py-2 bg-dracula-bg/80"
       />
     </div>
   );

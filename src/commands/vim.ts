@@ -1,5 +1,6 @@
 import type { CommandDefinition, CommandResult } from '@/types';
 import { getFilesystem, normalizePath, resolvePath } from '@/data/filesystem';
+import { getFileContent } from '@/lib/fileContent';
 
 export const vimCommand: CommandDefinition = {
   name: 'vim',
@@ -31,23 +32,21 @@ export const vimCommand: CommandDefinition = {
       };
     }
 
-    // Get file content
-    const content = typeof node.content === 'function' ? node.content() : node.content;
+    const content = getFileContent(node);
 
-    // Generate URL path based on viewer type
+    // Generate URL path based on file location
     let urlPath: string | undefined;
-    if (node.viewerType === 'project-detail' && node.meta?.project) {
-      const project = node.meta.project as { name: string };
-      urlPath = `/projects/${project.name}`;
-    } else if (node.viewerType === 'profile') {
+    if (node.meta?.project) {
+      urlPath = `/projects/${node.meta.project.name}`;
+    } else if (targetPath === '/home/hyeonmin/about.md' || targetPath === '/home/guest/about.md') {
       urlPath = '/about';
     }
 
     return {
       type: 'vim', // Special type for vim mode
-      viewerState: { type: 'vim', path: targetPath },
+      viewerState: targetPath,
       vimMode: { filePath: targetPath, content: content || '' },
       urlPath,
-    } as CommandResult;
+    };
   },
 };

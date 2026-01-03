@@ -1,0 +1,73 @@
+{
+  "version": "1.0",
+  "root": {
+    "home": {
+      "type": "directory",
+      "children": {
+        "guest": {
+          "type": "directory",
+          "children": {
+            ".bashrc": {
+              "type": "file",
+              "content": "# Guest user bashrc\nexport PS1=\"guest@portfolio:~$ \""
+            },
+            "hyeonmin": {
+              "type": "symlink",
+              "target": "/home/hyeonmin"
+            }
+          }
+        },
+        "hyeonmin": {
+          "type": "directory",
+          "children": {
+            "projects": {
+              "type": "directory",
+              "dynamic": "projects"
+            },
+            "about.md": {
+              "type": "file",
+              "icon": "User",
+              "dynamic": "profile"
+            }
+          }
+        }
+      }
+    },
+    "usr": {
+      "type": "directory",
+      "children": {
+        "bin": {
+          "type": "directory",
+          "children": {
+            "help": {
+              "type": "executable",
+              "icon": "HelpCircle"
+            },
+            "ls": { "type": "executable" },
+            "cd": { "type": "executable" },
+            "cat": { "type": "executable" },
+            "pwd": { "type": "executable" },
+            "clear": { "type": "executable" },
+            "history": { "type": "executable" },
+            "open": { "type": "executable" },
+            "whoami": { "type": "executable" },
+            "vim": { "type": "executable" }
+          }
+        }
+      }
+    },
+    "etc": {
+      "type": "directory",
+      "children": {
+        "motd": {
+          "type": "file",
+          "content": "Welcome to Hyeonmin's Portfolio Server\n======================================\n\nYou are logged in as: guest (read-only access)\nType 'help' for available commands."
+        },
+        "hostname": {
+          "type": "file",
+          "content": "portfolio.hyeonmin.dev"
+        }
+      }
+    }
+  }
+}

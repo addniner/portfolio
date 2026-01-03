@@ -1,8 +1,54 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 @plugin "@tailwindcss/typography";
 
-@theme {
-  /* Dracula Theme Colors */
+/* ============================================
+   Design System - Portfolio Theme
+   Based on shadcn/ui with custom extensions
+   ============================================ */
+
+@theme inline {
+  /* Radius System */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Core Color Mappings */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Semantic Colors */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  /* Terminal/Dracula Theme Colors (always dark, for terminal UI) */
   --color-dracula-bg: #282a36;
   --color-dracula-current: #44475a;
   --color-dracula-fg: #f8f8f2;
@@ -14,16 +60,214 @@
   --color-dracula-purple: #bd93f9;
   --color-dracula-red: #ff5555;
   --color-dracula-yellow: #f1fa8c;
-  --color-viewer-bg: #1e1e2e;
 
-  /* Typography */
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-sans: 'Inter', system-ui, sans-serif;
+  /* Terminal-specific colors */
+  --color-terminal-bg: var(--color-dracula-bg);
+  --color-terminal-fg: var(--color-dracula-fg);
+  --color-terminal-cursor: var(--color-dracula-green);
+  --color-terminal-selection: var(--color-dracula-current);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Chart Colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Code Syntax Highlighting - shared tokens */
+  --color-syntax-keyword: var(--syntax-keyword);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-function: var(--syntax-function);
+  --color-syntax-variable: var(--syntax-variable);
+  --color-syntax-comment: var(--syntax-comment);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-operator: var(--syntax-operator);
+  --color-syntax-class: var(--syntax-class);
+
+  /* Glass Effect Colors */
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+
+  /* Dock Colors */
+  --color-dock-bg: var(--dock-bg);
+  --color-dock-border: var(--dock-border);
+  --color-dock-item-active: var(--dock-item-active);
+
+  /* Window Colors (for floating panels) */
+  --color-window-bg: var(--window-bg);
+  --color-window-border: var(--window-border);
+  --color-window-shadow: var(--window-shadow);
 }
 
+/* ============================================
+   Light Theme (Default)
+   ============================================ */
+:root {
+  --radius: 0.625rem;
+
+  /* Core Colors - Light */
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.45 0.2 270);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0.01 270);
+  --secondary-foreground: oklch(0.25 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.94 0.02 270);
+  --accent-foreground: oklch(0.25 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --border: oklch(0.90 0 0);
+  --input: oklch(0.90 0 0);
+  --ring: oklch(0.45 0.2 270);
+
+  /* Semantic Colors - Light */
+  --success: oklch(0.55 0.15 145);
+  --warning: oklch(0.75 0.15 85);
+  --info: oklch(0.55 0.15 230);
+
+  /* Sidebar - Light */
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.45 0.2 270);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0.02 270);
+  --sidebar-accent-foreground: oklch(0.25 0 0);
+  --sidebar-border: oklch(0.90 0 0);
+  --sidebar-ring: oklch(0.45 0.2 270);
+
+  /* Chart Colors - Light */
+  --chart-1: oklch(0.55 0.22 25);
+  --chart-2: oklch(0.55 0.15 145);
+  --chart-3: oklch(0.55 0.15 230);
+  --chart-4: oklch(0.65 0.2 85);
+  --chart-5: oklch(0.55 0.2 310);
+
+  /* Code Syntax - Light */
+  --syntax-keyword: oklch(0.5 0.2 310);
+  --syntax-string: oklch(0.45 0.15 145);
+  --syntax-function: oklch(0.45 0.15 230);
+  --syntax-variable: oklch(0.35 0 0);
+  --syntax-comment: oklch(0.55 0 0);
+  --syntax-number: oklch(0.5 0.2 25);
+  --syntax-operator: oklch(0.4 0.15 270);
+  --syntax-class: oklch(0.5 0.18 85);
+
+  /* Glass Effect - Light */
+  --glass-bg: oklch(1 0 0 / 70%);
+  --glass-border: oklch(0 0 0 / 10%);
+
+  /* Dock - Light */
+  --dock-bg: oklch(0.95 0 0 / 85%);
+  --dock-border: oklch(0 0 0 / 15%);
+  --dock-item-active: oklch(0.45 0.2 270);
+
+  /* Window - Light */
+  --window-bg: oklch(1 0 0 / 80%);
+  --window-border: oklch(0 0 0 / 12%);
+  --window-shadow: oklch(0 0 0 / 15%);
+
+  /* Background gradient for depth */
+  --bg-gradient-from: oklch(0.96 0.02 270);
+  --bg-gradient-to: oklch(0.92 0.03 230);
+}
+
+/* ============================================
+   Dark Theme
+   ============================================ */
+.dark {
+  /* Core Colors - Dark */
+  --background: oklch(0.13 0.02 270);
+  --foreground: oklch(0.93 0.01 270);
+  --card: oklch(0.18 0.02 270);
+  --card-foreground: oklch(0.93 0.01 270);
+  --popover: oklch(0.18 0.02 270);
+  --popover-foreground: oklch(0.93 0.01 270);
+  --primary: oklch(0.70 0.18 270);
+  --primary-foreground: oklch(0.13 0 0);
+  --secondary: oklch(0.25 0.02 270);
+  --secondary-foreground: oklch(0.93 0 0);
+  --muted: oklch(0.25 0.02 270);
+  --muted-foreground: oklch(0.65 0.02 270);
+  --accent: oklch(0.30 0.03 270);
+  --accent-foreground: oklch(0.93 0 0);
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.70 0.18 270);
+
+  /* Semantic Colors - Dark */
+  --success: oklch(0.70 0.18 145);
+  --warning: oklch(0.80 0.15 85);
+  --info: oklch(0.70 0.18 230);
+
+  /* Sidebar - Dark */
+  --sidebar: oklch(0.16 0.02 270);
+  --sidebar-foreground: oklch(0.93 0.01 270);
+  --sidebar-primary: oklch(0.70 0.18 270);
+  --sidebar-primary-foreground: oklch(0.93 0 0);
+  --sidebar-accent: oklch(0.25 0.02 270);
+  --sidebar-accent-foreground: oklch(0.93 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.70 0.18 270);
+
+  /* Chart Colors - Dark */
+  --chart-1: oklch(0.70 0.22 270);
+  --chart-2: oklch(0.70 0.18 145);
+  --chart-3: oklch(0.70 0.18 230);
+  --chart-4: oklch(0.80 0.18 85);
+  --chart-5: oklch(0.70 0.22 310);
+
+  /* Code Syntax - Dark */
+  --syntax-keyword: oklch(0.75 0.18 310);
+  --syntax-string: oklch(0.72 0.18 145);
+  --syntax-function: oklch(0.72 0.18 230);
+  --syntax-variable: oklch(0.90 0.01 270);
+  --syntax-comment: oklch(0.55 0.03 270);
+  --syntax-number: oklch(0.75 0.18 25);
+  --syntax-operator: oklch(0.72 0.15 270);
+  --syntax-class: oklch(0.78 0.18 85);
+
+  /* Glass Effect - Dark */
+  --glass-bg: oklch(0.15 0.02 270 / 80%);
+  --glass-border: oklch(1 0 0 / 12%);
+
+  /* Dock - Dark */
+  --dock-bg: oklch(0.18 0.02 270 / 85%);
+  --dock-border: oklch(1 0 0 / 15%);
+  --dock-item-active: oklch(0.70 0.18 270);
+
+  /* Window - Dark */
+  --window-bg: oklch(0.15 0.02 270 / 85%);
+  --window-border: oklch(1 0 0 / 15%);
+  --window-shadow: oklch(0 0 0 / 40%);
+
+  /* Background gradient for depth */
+  --bg-gradient-from: oklch(0.12 0.03 280);
+  --bg-gradient-to: oklch(0.08 0.04 250);
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
 @layer base {
   * {
     box-sizing: border-box;
+    @apply border-border outline-ring/50;
   }
 
   html, body, #root {
@@ -34,10 +278,9 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: var(--color-dracula-bg);
-    color: var(--color-dracula-fg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    @apply bg-background text-foreground;
   }
 
   /* Scrollbar Styling */
@@ -47,18 +290,26 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: var(--color-dracula-bg);
+    @apply bg-muted/50;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--color-dracula-comment);
-    border-radius: 4px;
+    @apply bg-muted-foreground/30 rounded;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-dracula-purple);
+    @apply bg-primary/50;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary/30 text-foreground;
   }
 }
+
+/* ============================================
+   Utility Classes
+   ============================================ */
 
 /* Cursor Animation */
 @keyframes blink {
@@ -70,8 +321,38 @@
   animation: blink 1s step-end infinite;
 }
 
-/* Selection */
-::selection {
-  background-color: var(--color-dracula-purple);
-  color: var(--color-dracula-fg);
+/* Glassmorphism Utilities */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-subtle {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Window glass effect for floating panels */
+.window-glass {
+  background: var(--window-bg);
+  border: 1px solid var(--window-border);
+  box-shadow:
+    0 8px 32px var(--window-shadow),
+    0 4px 16px var(--window-shadow),
+    inset 0 1px 0 oklch(1 0 0 / 10%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Background with gradient for depth */
+.bg-depth {
+  background: linear-gradient(
+    135deg,
+    var(--bg-gradient-from) 0%,
+    var(--bg-gradient-to) 100%
+  );
 }

@@ -1,11 +1,7 @@
 import { useEffect, useRef } from 'react';
+import { cmd } from '@/lib/commands';
 
-interface DeepLinkCommand {
-  cmd: string;
-  args: string[];
-}
-
-function getCommandFromUrl(pathname: string): DeepLinkCommand | null {
+function getCommandFromUrl(pathname: string): string | null {
   // Remove base path if present
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   const normalizedPath = pathname.startsWith(basePath)
@@ -17,17 +13,17 @@ function getCommandFromUrl(pathname: string): DeepLinkCommand | null {
   }
 
   if (normalizedPath === '/projects') {
-    return { cmd: 'cd', args: ['hyeonmin/projects'] };
+    return cmd.cd('hyeonmin/projects');
   }
 
   if (normalizedPath === '/about') {
-    return { cmd: 'cd hyeonmin && vim', args: ['about.md'] };
+    return cmd.chain(cmd.cd('hyeonmin'), cmd.vim('about.md'));
   }
 
   if (normalizedPath.startsWith('/projects/')) {
     const projectName = normalizedPath.replace('/projects/', '');
     if (projectName) {
-      return { cmd: 'cd hyeonmin/projects && vim', args: [`${projectName}.md`] };
+      return cmd.chain(cmd.cd('hyeonmin/projects'), cmd.vim(`${projectName}.md`));
     }
   }
 
@@ -49,8 +45,7 @@ export function useDeepLink(
 
     const command = getCommandFromUrl(window.location.pathname);
     if (command) {
-      const fullCommand = [command.cmd, ...command.args].join(' ');
-      executeCommandRef.current(fullCommand, { silent: true });
+      executeCommandRef.current(command, { silent: true });
     }
   }, []);
 
@@ -65,8 +60,7 @@ export function useDeepLink(
         // Handle direct navigation (no state)
         const command = getCommandFromUrl(window.location.pathname);
         if (command) {
-          const fullCommand = [command.cmd, ...command.args].join(' ');
-          executeCommandRef.current(fullCommand, { silent: true });
+          executeCommandRef.current(command, { silent: true });
         }
       }
     };

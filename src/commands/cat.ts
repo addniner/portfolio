@@ -1,5 +1,6 @@
 import type { CommandDefinition, CommandResult } from '@/types';
 import { getFilesystem, normalizePath, resolvePath } from '@/data/filesystem';
+import { getFileContent } from '@/lib/fileContent';
 
 export const catCommand: CommandDefinition = {
   name: 'cat',
@@ -31,8 +32,7 @@ export const catCommand: CommandDefinition = {
       };
     }
 
-    // Get file content
-    const content = typeof node.content === 'function' ? node.content() : node.content;
+    const content = getFileContent(node);
 
     // cat only outputs to terminal, no viewer change
     return {

@@ -46,8 +46,8 @@ test.describe('FileExplorer Navigation', () => {
     await expect(page.getByText('/home/hyeonmin/projects', { exact: true })).toBeVisible();
 
     // Click on hyeonmin in breadcrumb to go back
-    // The breadcrumb is in the toolbar (glassmorphism style), not in the file grid
-    await page.locator('[class*="bg-black"]').getByRole('button', { name: 'hyeonmin' }).click();
+    // Breadcrumb buttons are small (text-xs) and not in the file grid
+    await page.locator('button.text-xs, button:has(.text-xs)').filter({ hasText: 'hyeonmin' }).click();
 
     // Should be back in /home/hyeonmin - verify by checking projects folder is visible
     await expect(getFileGridButton(page, 'projects')).toBeVisible();
@@ -80,8 +80,8 @@ test.describe('Back/Forward Navigation', () => {
     await getFileGridButton(page, 'projects').click();
     await expect(page.getByText('/home/hyeonmin/projects', { exact: true })).toBeVisible();
 
-    // Click back button (ChevronLeft button in toolbar)
-    await page.locator('[class*="bg-white"]').getByRole('button').first().click();
+    // Click back button (first button with aria-label for back navigation)
+    await page.getByRole('button', { name: 'Go back to parent directory' }).click();
 
     // Should be back in /home/hyeonmin - verify by checking projects folder is visible again
     await expect(getFileGridButton(page, 'projects')).toBeVisible();
@@ -110,8 +110,8 @@ test.describe('URL Navigation', () => {
     // Wait for terminal to be ready first
     await expect(page.getByRole('textbox', { name: 'Terminal input' })).toBeVisible();
 
-    // Should show project files - check for portfolio.md button (wait for deep link to execute)
-    await expect(page.getByRole('button', { name: /portfolio/ })).toBeVisible({ timeout: 10000 });
+    // Should show project files - check for portfolio.md button in file grid (wait for deep link to execute)
+    await expect(getFileGridButton(page, 'portfolio.md')).toBeVisible({ timeout: 10000 });
   });
 
   test('navigating to /projects/portfolio should show project in vim', async ({ page }) => {

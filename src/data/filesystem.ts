@@ -2,9 +2,17 @@ import type { LucideIcon } from 'lucide-react';
 import { Folder, FileText, User, HelpCircle, File } from 'lucide-react';
 import { getProjects } from './index';
 import { profile } from './profile';
+import type { Project } from '@/types/project';
+import filesystemJSON from './filesystem.json';
+import type { FSNodeJSON, FilesystemJSON } from './filesystem.schema';
 
 // File system node types
 export type FSNodeType = 'directory' | 'file' | 'executable' | 'symlink';
+
+// FSNode 메타데이터 타입
+export interface FSNodeMeta {
+  project?: Project;
+}
 
 export interface FSNode {
   name: string;
@@ -12,77 +20,22 @@ export interface FSNode {
   icon?: LucideIcon;
   children?: Record<string, FSNode>;
   content?: string | (() => string);
-  // For files that trigger viewer updates
-  viewerType?: 'markdown' | 'profile' | 'help' | 'projects' | 'project-detail';
-  // Additional metadata
-  meta?: Record<string, unknown>;
-  // For symlinks
+  meta?: FSNodeMeta;
   target?: string;
 }
 
-// Build the virtual filesystem
-export function buildFilesystem(): FSNode {
-  const projects = getProjects();
+// Icon mapping from string to LucideIcon
+const ICON_MAP: Record<string, LucideIcon> = {
+  Folder,
+  FileText,
+  User,
+  HelpCircle,
+  File,
+};
 
-  // Create project files (not folders) dynamically
-  const projectFiles: Record<string, FSNode> = {};
-  for (const project of projects) {
-    projectFiles[`${project.name}.md`] = {
-      name: `${project.name}.md`,
-      type: 'file',
-      icon: FileText,
-      viewerType: 'project-detail',
-      content: project.readme,
-      meta: { project },
-    };
-  }
-
-  return {
-    name: '/',
-    type: 'directory',
-    children: {
-      home: {
-        name: 'home',
-        type: 'directory',
-        icon: Folder,
-        children: {
-          guest: {
-            name: 'guest',
-            type: 'directory',
-            icon: Folder,
-            children: {
-              '.bashrc': {
-                name: '.bashrc',
-                type: 'file',
-                icon: File,
-                content: '# Guest user bashrc\nexport PS1="guest@portfolio:~$ "',
-              },
-              hyeonmin: {
-                name: 'hyeonmin',
-                type: 'symlink',
-                icon: Folder,
-                target: '/home/hyeonmin',
-              },
-            },
-          },
-          hyeonmin: {
-            name: 'hyeonmin',
-            type: 'directory',
-            icon: Folder,
-            children: {
-              projects: {
-                name: 'projects',
-                type: 'directory',
-                icon: Folder,
-                viewerType: 'projects',
-                children: projectFiles,
-              },
-              'about.md': {
-                name: 'about.md',
-                type: 'file',
-                icon: User,
-                viewerType: 'profile',
-                content: () => `# ${profile.name}
+// Generate profile content
+function generateProfileContent(): string {
+  return `# ${profile.name}
 
 **${profile.title}**
 
@@ -97,69 +50,66 @@ ${profile.bio}
 
 ## Skills
 
-${profile.skills.map(skill => `- ${skill}`).join('\n')}`,
-              },
-            },
-          },
-        },
-      },
-      usr: {
-        name: 'usr',
-        type: 'directory',
-        icon: Folder,
-        children: {
-          bin: {
-            name: 'bin',
-            type: 'directory',
-            icon: Folder,
-            children: {
-              help: {
-                name: 'help',
-                type: 'executable',
-                icon: HelpCircle,
-                viewerType: 'help',
-              },
-              ls: { name: 'ls', type: 'executable' },
-              cd: { name: 'cd', type: 'executable' },
-              cat: { name: 'cat', type: 'executable' },
-              pwd: { name: 'pwd', type: 'executable' },
-              clear: { name: 'clear', type: 'executable' },
-              history: { name: 'history', type: 'executable' },
-              open: { name: 'open', type: 'executable' },
-              whoami: { name: 'whoami', type: 'executable' },
-            },
-          },
-        },
-      },
-      etc: {
-        name: 'etc',
-        type: 'directory',
-        icon: Folder,
-        children: {
-          motd: {
-            name: 'motd',
-            type: 'file',
-            icon: FileText,
-            content: `
-Welcome to Hyeonmin's Portfolio Server
-======================================
+${profile.skills.map(skill => `- ${skill}`).join('\n')}`;
+}
 
-You are logged in as: guest (read-only access)
-Type 'help' for available commands.
+// Convert JSON node to FSNode
+function jsonToFSNode(name: string, json: FSNodeJSON): FSNode {
+  const projects = getProjects();
 
-Last login: ${new Date().toLocaleString()}
-`,
-          },
-          hostname: {
-            name: 'hostname',
-            type: 'file',
-            icon: File,
-            content: 'portfolio.hyeonmin.dev',
-          },
-        },
-      },
-    },
+  const node: FSNode = {
+    name,
+    type: json.type,
+    icon: json.icon ? ICON_MAP[json.icon] : (json.type === 'directory' ? Folder : json.type === 'file' ? FileText : undefined),
+    target: json.target,
+    content: json.content,
   };
+
+  // Handle dynamic content
+  if (json.dynamic === 'profile') {
+    node.content = generateProfileContent;
+  }
+
+  // Handle children
+  if (json.children) {
+    node.children = {};
+    for (const [childName, childJson] of Object.entries(json.children)) {
+      node.children[childName] = jsonToFSNode(childName, childJson);
+    }
+  }
+
+  // Handle dynamic projects
+  if (json.dynamic === 'projects') {
+    node.children = node.children || {};
+    for (const project of projects) {
+      node.children[`${project.name}.md`] = {
+        name: `${project.name}.md`,
+        type: 'file',
+        icon: FileText,
+        content: project.readme,
+        meta: { project },
+      };
+    }
+  }
+
+  return node;
+}
+
+// Build the virtual filesystem from JSON
+export function buildFilesystem(): FSNode {
+  const json = filesystemJSON as FilesystemJSON;
+
+  const root: FSNode = {
+    name: '/',
+    type: 'directory',
+    children: {},
+  };
+
+  for (const [name, nodeJson] of Object.entries(json.root)) {
+    root.children![name] = jsonToFSNode(name, nodeJson);
+  }
+
+  return root;
 }
 
 // Singleton filesystem instance
@@ -174,17 +124,14 @@ export function getFilesystem(): FSNode {
 
 // Path utilities
 export function normalizePath(path: string, cwd: string): string {
-  // Handle home directory shortcut
   if (path === '~' || path.startsWith('~/')) {
     path = path.replace('~', '/home/guest');
   }
 
-  // Handle relative paths
   if (!path.startsWith('/')) {
     path = `${cwd}/${path}`;
   }
 
-  // Normalize path (resolve . and ..)
   const parts = path.split('/').filter(Boolean);
   const resolved: string[] = [];
 
@@ -211,7 +158,6 @@ export function resolvePath(path: string, fs: FSNode): FSNode | null {
     }
     current = current.children[part];
 
-    // Follow symlinks
     if (current.type === 'symlink' && current.target) {
       current = resolvePath(current.target, fs) ?? undefined;
       if (!current) return null;
@@ -221,7 +167,6 @@ export function resolvePath(path: string, fs: FSNode): FSNode | null {
   return current ?? null;
 }
 
-// Resolve path and track actual path after following symlinks
 export function resolvePathWithSymlinks(path: string, fs: FSNode): { node: FSNode; actualPath: string } | null {
   if (path === '/') return { node: fs, actualPath: '/' };
 
@@ -235,12 +180,10 @@ export function resolvePathWithSymlinks(path: string, fs: FSNode): { node: FSNod
     }
     current = current.children[part];
 
-    // Follow symlinks and update path
     if (current.type === 'symlink' && current.target) {
       const targetResult = resolvePathWithSymlinks(current.target, fs);
       if (!targetResult) return null;
       current = targetResult.node;
-      // Replace current path with symlink target path
       resolvedParts.length = 0;
       resolvedParts.push(...targetResult.actualPath.split('/').filter(Boolean));
     } else {
@@ -251,7 +194,6 @@ export function resolvePathWithSymlinks(path: string, fs: FSNode): { node: FSNod
   return current ? { node: current, actualPath: '/' + resolvedParts.join('/') } : null;
 }
 
-// Resolve symlink to get actual target path
 export function resolveSymlink(node: FSNode, fs: FSNode): { node: FSNode; path: string } | null {
   if (node.type !== 'symlink' || !node.target) {
     return null;
@@ -273,7 +215,6 @@ export function getBasename(path: string): string {
   return parts[parts.length - 1] || '/';
 }
 
-// List directory contents
 export function listDirectory(path: string, fs: FSNode): FSNode[] | null {
   const node = resolvePath(path, fs);
   if (!node || node.type !== 'directory' || !node.children) {
