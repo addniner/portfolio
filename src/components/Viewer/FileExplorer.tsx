@@ -13,6 +13,8 @@ import {
   Home,
   HardDrive,
   ExternalLink,
+  User,
+  FolderKanban,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { motion } from 'motion/react';
@@ -76,12 +78,26 @@ export function FileExplorer({ path }: FileExplorerProps) {
     executeCommand('cd .. && ls');
   };
 
-  const handleHomeClick = () => {
-    executeCommand('cd ~ && ls');
-  };
-
   const handleRootClick = () => {
     executeCommand('cd / && ls');
+  };
+
+  const handleSidebarClick = (targetPath: string) => {
+    executeCommand(`cd ${targetPath} && ls`);
+  };
+
+  // Sidebar items
+  const sidebarItems = [
+    { label: 'Home', icon: Home, path: '~', color: 'text-blue-400' },
+    { label: 'hyeonmin', icon: User, path: '/home/hyeonmin', color: 'text-purple-400' },
+    { label: 'Projects', icon: FolderKanban, path: '/home/hyeonmin/projects', color: 'text-green-400' },
+  ];
+
+  // Check if current path matches sidebar item
+  const isActivePath = (itemPath: string) => {
+    const normalizedPath = path.replace('/home/guest', '~');
+    const normalizedItemPath = itemPath.replace('/home/guest', '~');
+    return normalizedPath === normalizedItemPath || path === itemPath;
   };
 
   // Filter and sort contents
@@ -96,161 +112,213 @@ export function FileExplorer({ path }: FileExplorerProps) {
     });
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950">
-      {/* macOS-style Toolbar */}
-      <div className="flex items-center gap-3 px-5 py-4 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700/50">
-        {/* Navigation buttons */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleBackClick}
-            disabled={path === '/'}
-            className={cn(
-              'p-2 rounded-lg transition-all duration-200',
-              path === '/'
-                ? 'text-slate-600 cursor-not-allowed'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/80 hover:shadow-lg'
-            )}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            className="p-2 rounded-lg text-slate-600 cursor-not-allowed"
-            disabled
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="h-full flex bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
+      </div>
 
-        {/* Breadcrumb */}
-        <div className="flex-1 flex items-center gap-1.5 px-4 py-2 bg-slate-900/60 rounded-xl overflow-x-auto border border-slate-700/30">
-          <button
-            onClick={handleRootClick}
-            className="text-slate-400 hover:text-white transition-colors flex-shrink-0 p-1 hover:bg-slate-700/50 rounded"
-          >
-            <HardDrive className="w-5 h-5" />
-          </button>
-          {pathParts.map((part, index) => (
-            <div key={index} className="flex items-center gap-1.5 flex-shrink-0">
-              <ChevronRight className="w-4 h-4 text-slate-600" />
+      {/* Sidebar */}
+      <div className="relative z-10 w-44 shrink-0 flex flex-col py-4 pl-4">
+        <div className="flex-1 flex flex-col gap-1 pr-2">
+          {/* Favorites Section */}
+          <div className="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            Favorites
+          </div>
+          {sidebarItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = isActivePath(item.path);
+            return (
               <button
-                onClick={() => handleBreadcrumbClick(index)}
+                key={item.path}
+                onClick={() => handleSidebarClick(item.path)}
                 className={cn(
-                  'px-2.5 py-1 rounded-lg transition-all duration-200 text-sm whitespace-nowrap',
-                  index === pathParts.length - 1
-                    ? 'text-white font-semibold bg-slate-700/50'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium',
+                  'transition-all duration-200',
+                  isActive
+                    ? 'bg-white/10 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 )}
               >
-                {part}
+                <Icon className={cn('w-4 h-4', isActive ? item.color : '')} />
+                <span className="truncate">{item.label}</span>
               </button>
-            </div>
-          ))}
-        </div>
+            );
+          })}
 
-        {/* Home button */}
-        <button
-          onClick={handleHomeClick}
-          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/80 hover:shadow-lg transition-all duration-200"
-          title="Home"
-        >
-          <Home className="w-5 h-5" />
-        </button>
+          {/* Locations Section */}
+          <div className="px-3 py-2 mt-4 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            Locations
+          </div>
+          <button
+            onClick={handleRootClick}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium',
+              'transition-all duration-200',
+              path === '/'
+                ? 'bg-white/10 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            )}
+          >
+            <HardDrive className={cn('w-4 h-4', path === '/' ? 'text-slate-300' : '')} />
+            <span className="truncate">Root</span>
+          </button>
+        </div>
       </div>
 
-      {/* Grid View */}
-      <div className="flex-1 overflow-y-auto p-8">
-        {visibleContents.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-500">
-            <Folder className="w-24 h-24 mb-6 opacity-20" />
-            <p className="text-lg">This folder is empty</p>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Glassmorphism Toolbar */}
+        <div className="relative z-10 flex items-center gap-3 px-4 py-3 mr-4 mt-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg">
+          {/* Navigation buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleBackClick}
+              disabled={path === '/'}
+              className={cn(
+                'p-1.5 rounded-lg transition-all duration-200',
+                path === '/'
+                  ? 'text-slate-600 cursor-not-allowed'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10'
+              )}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              className="p-1.5 rounded-lg text-slate-600 cursor-not-allowed"
+              disabled
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {visibleContents.map((node, index) => {
-              const isFolder = node.type === 'directory' || node.type === 'symlink';
-              const isSymlink = node.type === 'symlink';
-              const ext = node.name.split('.').pop() || '';
-              const gradientColor = isFolder
-                ? folderColors[node.name] || 'from-blue-400 to-indigo-600'
-                : fileColors[ext] || 'from-slate-500 to-slate-700';
 
-              return (
-                <motion.button
-                  key={node.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.3 }}
-                  onClick={() => handleItemClick(node)}
+          {/* Breadcrumb - Glass style */}
+          <div className="flex-1 flex items-center gap-1 px-3 py-1.5 bg-black/20 backdrop-blur-sm rounded-lg overflow-x-auto border border-white/5">
+            <button
+              onClick={handleRootClick}
+              className="text-slate-400 hover:text-white transition-colors flex-shrink-0 p-0.5 hover:bg-white/10 rounded"
+            >
+              <HardDrive className="w-4 h-4" />
+            </button>
+            {pathParts.map((part, index) => (
+              <div key={index} className="flex items-center gap-1 flex-shrink-0">
+                <ChevronRight className="w-3 h-3 text-slate-500" />
+                <button
+                  onClick={() => handleBreadcrumbClick(index)}
                   className={cn(
-                    'group flex flex-col items-center gap-4 p-6 rounded-2xl',
-                    'bg-slate-800/30 hover:bg-slate-800/60',
-                    'border border-transparent hover:border-slate-600/50',
-                    'transition-all duration-300 ease-out',
-                    'hover:shadow-2xl hover:shadow-slate-900/50',
-                    'hover:-translate-y-1',
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                    'px-2 py-0.5 rounded transition-all duration-200 text-xs whitespace-nowrap',
+                    index === pathParts.length - 1
+                      ? 'text-white font-semibold bg-white/15'
+                      : 'text-slate-400 hover:text-white hover:bg-white/10'
                   )}
                 >
-                  {/* Icon */}
-                  <div className="relative">
-                    {isFolder ? (
-                      <div
-                        className={cn(
-                          'w-24 h-20 rounded-2xl bg-gradient-to-br shadow-xl',
-                          'flex items-center justify-center',
-                          'group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300',
-                          'group-hover:rotate-[-2deg]',
-                          gradientColor
-                        )}
-                      >
-                        <Folder className="w-12 h-12 text-white/90 drop-shadow-md" />
-                        {isSymlink && (
-                          <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shadow-lg">
-                            <ExternalLink className="w-4 h-4 text-slate-300" />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div
-                        className={cn(
-                          'w-24 h-28 rounded-2xl bg-gradient-to-br shadow-xl',
-                          'flex flex-col items-center justify-center relative',
-                          'group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300',
-                          'group-hover:rotate-[2deg]',
-                          gradientColor
-                        )}
-                      >
-                        {/* Folded corner */}
-                        <div className="absolute top-0 right-0 w-6 h-6 bg-white/20 rounded-bl-xl" />
-                        <FileText className="w-10 h-10 text-white/90 drop-shadow-md" />
-                        {/* File extension badge */}
-                        <span className="mt-2 px-2 py-0.5 bg-black/20 rounded text-xs text-white/80 uppercase font-medium">
-                          {ext}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  {part}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                  {/* Label */}
-                  <span
+        {/* Grid View */}
+        <div className="relative z-10 flex-1 overflow-y-auto p-4 pr-4">
+          {visibleContents.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-500">
+              <Folder className="w-20 h-20 mb-4 opacity-20" />
+              <p className="text-base">This folder is empty</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {visibleContents.map((node, index) => {
+                const isFolder = node.type === 'directory' || node.type === 'symlink';
+                const isSymlink = node.type === 'symlink';
+                const ext = node.name.split('.').pop() || '';
+                const gradientColor = isFolder
+                  ? folderColors[node.name] || 'from-blue-400 to-indigo-600'
+                  : fileColors[ext] || 'from-slate-500 to-slate-700';
+
+                return (
+                  <motion.button
+                    key={node.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.3 }}
+                    onClick={() => handleItemClick(node)}
                     className={cn(
-                      'text-sm font-medium text-center leading-snug max-w-full px-2',
-                      'line-clamp-2 break-all',
-                      'text-slate-300 group-hover:text-white transition-colors duration-200'
+                      'group flex flex-col items-center gap-3 p-4 rounded-xl',
+                      // Glassmorphism card
+                      'bg-white/5 backdrop-blur-md',
+                      'border border-white/10',
+                      'hover:bg-white/10 hover:border-white/20',
+                      'transition-all duration-300 ease-out',
+                      'hover:shadow-xl hover:shadow-black/20',
+                      'hover:-translate-y-1',
+                      'focus:outline-none focus:ring-2 focus:ring-purple-500/50'
                     )}
                   >
-                    {node.name}
-                  </span>
-                </motion.button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    {/* Icon */}
+                    <div className="relative">
+                      {isFolder ? (
+                        <div
+                          className={cn(
+                            'w-16 h-14 rounded-lg bg-gradient-to-br',
+                            'flex items-center justify-center',
+                            'shadow-lg shadow-black/20',
+                            'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
+                            'group-hover:rotate-[-2deg]',
+                            gradientColor
+                          )}
+                        >
+                          <Folder className="w-8 h-8 text-white/90 drop-shadow-md" />
+                          {isSymlink && (
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-slate-800/90 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 shadow-lg">
+                              <ExternalLink className="w-3 h-3 text-slate-300" />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            'w-16 h-20 rounded-lg bg-gradient-to-br',
+                            'flex flex-col items-center justify-center relative',
+                            'shadow-lg shadow-black/20',
+                            'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
+                            'group-hover:rotate-[2deg]',
+                            gradientColor
+                          )}
+                        >
+                          {/* Folded corner */}
+                          <div className="absolute top-0 right-0 w-4 h-4 bg-white/20 rounded-bl-md" />
+                          <FileText className="w-7 h-7 text-white/90 drop-shadow-md" />
+                          {/* File extension badge */}
+                          <span className="mt-1 px-1.5 py-0.5 bg-black/30 backdrop-blur-sm rounded text-[9px] text-white/90 uppercase font-semibold tracking-wide">
+                            {ext}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-      {/* Status Bar */}
-      <div className="px-6 py-3 bg-slate-800/60 border-t border-slate-700/50 text-sm text-slate-400 font-medium">
-        {visibleContents.length} {visibleContents.length === 1 ? 'item' : 'items'}
+                    {/* Label */}
+                    <span
+                      className={cn(
+                        'text-xs font-medium text-center leading-snug max-w-full px-1',
+                        'line-clamp-2 break-all',
+                        'text-slate-300 group-hover:text-white transition-colors duration-200'
+                      )}
+                    >
+                      {node.name}
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Glassmorphism Status Bar */}
+        <div className="relative z-10 mr-4 mb-4 px-4 py-2 rounded-lg bg-white/5 backdrop-blur-xl border border-white/10 text-xs text-slate-400 font-medium">
+          {visibleContents.length} {visibleContents.length === 1 ? 'item' : 'items'}
+        </div>
       </div>
     </div>
   );

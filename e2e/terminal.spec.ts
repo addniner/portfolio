@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+// Helper to get file grid buttons (not sidebar buttons)
+// File grid buttons have the 'group' class, sidebar buttons don't
+const getFileGridButton = (page: ReturnType<typeof test.use>, name: string) =>
+  page.locator('button.group').filter({ hasText: name });
+
 test.describe('Terminal Commands', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -9,7 +14,7 @@ test.describe('Terminal Commands', () => {
 
   test('should show initial directory view', async ({ page }) => {
     // Should show FileExplorer with hyeonmin folder (symlink in /home/guest)
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
   });
 
   test('help command should output to terminal only', async ({ page }) => {
@@ -22,7 +27,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText('Use Tab for autocomplete')).toBeVisible();
 
     // Viewer should NOT change - still show FileExplorer
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
   });
 
   test('ls command should output to terminal only', async ({ page }) => {
@@ -30,11 +35,11 @@ test.describe('Terminal Commands', () => {
     await terminal.fill('ls');
     await terminal.press('Enter');
 
-    // Should show directory listing in terminal
-    await expect(page.getByText('hyeonmin')).toBeVisible();
+    // Should show directory listing in terminal (use first match since sidebar also shows 'hyeonmin')
+    await expect(page.getByText('hyeonmin').first()).toBeVisible();
 
     // Viewer should NOT change
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
   });
 
   test('ls / should not change viewer', async ({ page }) => {
@@ -46,7 +51,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText(/home\//)).toBeVisible();
 
     // Viewer should still show /home/guest (not root)
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
   });
 
   test('whoami command should output to terminal only', async ({ page }) => {
@@ -58,7 +63,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText('Hyeonmin Lee')).toBeVisible();
 
     // Viewer should NOT change
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
   });
 
   test('cd command should change directory and viewer', async ({ page }) => {
@@ -70,7 +75,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText('/home/hyeonmin', { exact: true })).toBeVisible();
 
     // Viewer should show contents of /home/hyeonmin
-    await expect(page.getByRole('button', { name: 'projects' })).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
     await expect(page.getByRole('button', { name: 'md about.md' })).toBeVisible();
   });
 
@@ -86,9 +91,9 @@ test.describe('Terminal Commands', () => {
     await terminal.fill('cd ~');
     await terminal.press('Enter');
 
-    // Prompt should show ~ (home) - use exact match
-    await expect(page.getByText('~', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    // Prompt should show ~ (home) - use first match since ~ appears multiple times in terminal
+    await expect(page.getByText('~').first()).toBeVisible();
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
   });
 
   test('clear command should clear terminal only', async ({ page }) => {
@@ -107,7 +112,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText('Available commands:')).not.toBeVisible();
 
     // Viewer should still be the same
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
   });
 
   test('unknown command should show error', async ({ page }) => {
@@ -127,7 +132,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText(/projects\//)).toBeVisible();
 
     // Viewer should show /home/hyeonmin
-    await expect(page.getByRole('button', { name: 'projects' })).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('command chaining with && should stop on error', async ({ page }) => {

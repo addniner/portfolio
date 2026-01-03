@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+// Helper to get file grid buttons (not sidebar buttons)
+// File grid buttons have the 'group' class, sidebar buttons don't
+const getFileGridButton = (page: ReturnType<typeof test.use>, name: string) =>
+  page.locator('button.group').filter({ hasText: name });
+
 test.describe('FileExplorer Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -7,20 +12,20 @@ test.describe('FileExplorer Navigation', () => {
   });
 
   test('clicking folder should navigate via cd command', async ({ page }) => {
-    // Click on hyeonmin folder
-    await page.getByRole('button', { name: 'hyeonmin' }).click();
+    // Click on hyeonmin folder in file grid (not sidebar)
+    await getFileGridButton(page, 'hyeonmin').click();
 
     // Terminal should show cd command was executed
     await expect(page.getByText('$ cd hyeonmin')).toBeVisible();
 
     // Viewer should show contents of /home/hyeonmin
-    await expect(page.getByRole('button', { name: 'projects' })).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('clicking file should open in vim', async ({ page }) => {
     // Navigate to hyeonmin first
-    await page.getByRole('button', { name: 'hyeonmin' }).click();
-    await expect(page.getByRole('button', { name: 'projects' })).toBeVisible();
+    await getFileGridButton(page, 'hyeonmin').click();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
 
     // Click on about.md button (not the terminal output)
     await page.getByRole('button', { name: 'md about.md' }).click();
@@ -34,32 +39,33 @@ test.describe('FileExplorer Navigation', () => {
 
   test('breadcrumb navigation should work', async ({ page }) => {
     // Navigate to hyeonmin/projects
-    await page.getByRole('button', { name: 'hyeonmin' }).click();
-    await page.getByRole('button', { name: 'projects' }).click();
+    await getFileGridButton(page, 'hyeonmin').click();
+    await getFileGridButton(page, 'projects').click();
 
     // Should be in /home/hyeonmin/projects (check terminal prompt)
     await expect(page.getByText('/home/hyeonmin/projects', { exact: true })).toBeVisible();
 
     // Click on hyeonmin in breadcrumb to go back
-    // The breadcrumb is in the toolbar, not in the file grid
-    await page.locator('[class*="bg-slate-900"]').getByRole('button', { name: 'hyeonmin' }).click();
+    // The breadcrumb is in the toolbar (glassmorphism style), not in the file grid
+    await page.locator('[class*="bg-black"]').getByRole('button', { name: 'hyeonmin' }).click();
 
-    // Should be back in /home/hyeonmin
-    await expect(page.getByText('/home/hyeonmin', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'projects' })).toBeVisible();
+    // Should be back in /home/hyeonmin - verify by checking projects folder is visible
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'md about.md' })).toBeVisible();
   });
 
   test('home button should navigate to ~', async ({ page }) => {
-    // Navigate away first
-    await page.getByRole('button', { name: 'hyeonmin' }).click();
+    // Navigate away first using sidebar
+    await page.locator('button').filter({ hasText: /^hyeonmin$/ }).first().click();
     await expect(page.getByText('/home/hyeonmin', { exact: true })).toBeVisible();
 
-    // Click Home button (the one with title="Home")
-    await page.getByRole('button', { name: 'Home', exact: true }).click();
+    // Click Home button in sidebar (the first one)
+    await page.locator('button').filter({ hasText: /^Home$/ }).first().click();
 
-    // Should be back at home
-    await expect(page.getByText('~', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'hyeonmin' })).toBeVisible();
+    // Should be back at home - check for hyeonmin folder in file grid
+    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    // Check terminal shows ~ in prompt (use first() since ~ appears multiple times)
+    await expect(page.getByText('~').first()).toBeVisible();
   });
 });
 
@@ -68,17 +74,17 @@ test.describe('Back/Forward Navigation', () => {
     await page.goto('/');
 
     // Navigate: ~ -> hyeonmin -> projects
-    await page.getByRole('button', { name: 'hyeonmin' }).click();
-    await expect(page.getByRole('button', { name: 'projects' })).toBeVisible();
+    await getFileGridButton(page, 'hyeonmin').click();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
 
-    await page.getByRole('button', { name: 'projects' }).click();
+    await getFileGridButton(page, 'projects').click();
     await expect(page.getByText('/home/hyeonmin/projects', { exact: true })).toBeVisible();
 
-    // Click back button (ChevronLeft button)
-    await page.getByRole('button').first().click();
+    // Click back button (ChevronLeft button in toolbar)
+    await page.locator('[class*="bg-white"]').getByRole('button').first().click();
 
     // Should be back in /home/hyeonmin - verify by checking projects folder is visible again
-    await expect(page.getByRole('button', { name: 'projects' })).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
     await expect(page.getByRole('button', { name: 'md about.md' })).toBeVisible();
   });
 });
@@ -88,7 +94,7 @@ test.describe('URL Navigation', () => {
   // doesn't work well with SPA path-based routing
 
   test('navigating to /about should open about.md in vim', async ({ page }) => {
-    await page.goto('http://localhost:5173/portfolio/about');
+    await page.goto('http://localhost:5173/about');
 
     // Wait for terminal to be ready first
     await expect(page.getByRole('textbox', { name: 'Terminal input' })).toBeVisible();
@@ -99,7 +105,7 @@ test.describe('URL Navigation', () => {
   });
 
   test('navigating to /projects should show projects directory', async ({ page }) => {
-    await page.goto('http://localhost:5173/portfolio/projects');
+    await page.goto('http://localhost:5173/projects');
 
     // Wait for terminal to be ready first
     await expect(page.getByRole('textbox', { name: 'Terminal input' })).toBeVisible();
@@ -109,7 +115,7 @@ test.describe('URL Navigation', () => {
   });
 
   test('navigating to /projects/portfolio should show project in vim', async ({ page }) => {
-    await page.goto('http://localhost:5173/portfolio/projects/portfolio');
+    await page.goto('http://localhost:5173/projects/portfolio');
 
     // Wait for terminal to be ready first
     await expect(page.getByRole('textbox', { name: 'Terminal input' })).toBeVisible();
