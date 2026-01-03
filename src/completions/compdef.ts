@@ -10,6 +10,7 @@
  */
 
 import { getProjectNames } from '@/data';
+import { getFilesystem, resolvePath } from '@/data/filesystem';
 
 /**
  * 명령어별 completer 매핑
@@ -24,7 +25,7 @@ const commandCompleterMap: Map<string, string> = new Map();
  */
 interface CompleterConfig {
   /** 완성 후보 생성 함수 */
-  generate: (prefix: string) => string[];
+  generate: (prefix: string, cwd: string) => string[];
 }
 
 const completerRegistry: Map<string, CompleterConfig> = new Map();
@@ -65,19 +66,45 @@ export function getCompleterConfig(name: string): CompleterConfig | undefined {
 
 // _projects: 프로젝트명 완성
 registerCompleter('_projects', {
-  generate: (prefix: string) => {
+  generate: (prefix: string, _cwd: string) => {
     return getProjectNames().filter(
       name => name.startsWith(prefix) && name !== prefix
     );
   },
 });
 
-// _paths: cd용 특수 경로 + 프로젝트명
+// _paths: cd용 디렉토리 완성 (현재 디렉토리 기준)
 registerCompleter('_paths', {
-  generate: (prefix: string) => {
-    const specialPaths = ['~', '..', '/'];
-    const projectNames = getProjectNames();
-    const allOptions = [...specialPaths, ...projectNames];
+  generate: (prefix: string, cwd: string) => {
+    const fs = getFilesystem();
+
+    // 현재 디렉토리의 하위 디렉토리들 가져오기
+    const currentDir = resolvePath(cwd, fs);
+    const directories: string[] = [];
+
+    if (currentDir?.type === 'directory' && currentDir.children) {
+      for (const [name, node] of Object.entries(currentDir.children)) {
+        // 디렉토리와 심볼릭 링크만 포함 (숨김 파일 제외)
+        if ((node.type === 'directory' || node.type === 'symlink') && !name.startsWith('.')) {
+          directories.push(name);
+        }
+      }
+    }
+
+    // 특수 경로는 사용자가 해당 문자로 시작할 때만 표시
+    const specialPaths: string[] = [];
+    if (prefix.startsWith('~')) {
+      specialPaths.push('~');
+    }
+    if (prefix.startsWith('.')) {
+      specialPaths.push('..');
+    }
+    if (prefix.startsWith('/')) {
+      specialPaths.push('/');
+    }
+
+    // 디렉토리 먼저, 그 다음 특수 경로
+    const allOptions = [...directories, ...specialPaths];
     return allOptions.filter(
       opt => opt.startsWith(prefix) && opt !== prefix
     );

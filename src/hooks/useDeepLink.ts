@@ -6,22 +6,28 @@ interface DeepLinkCommand {
 }
 
 function getCommandFromUrl(pathname: string): DeepLinkCommand | null {
-  if (pathname === '/' || pathname === '') {
+  // Remove base path if present
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const normalizedPath = pathname.startsWith(basePath)
+    ? pathname.slice(basePath.length) || '/'
+    : pathname;
+
+  if (normalizedPath === '/' || normalizedPath === '') {
     return null;
   }
 
-  if (pathname === '/projects') {
-    return { cmd: 'ls', args: ['-l'] };
+  if (normalizedPath === '/projects') {
+    return { cmd: 'cd', args: ['hyeonmin/projects'] };
   }
 
-  if (pathname === '/about') {
-    return { cmd: 'whoami', args: [] };
+  if (normalizedPath === '/about') {
+    return { cmd: 'cd hyeonmin && vim', args: ['about.md'] };
   }
 
-  if (pathname.startsWith('/projects/')) {
-    const projectName = pathname.replace('/projects/', '');
+  if (normalizedPath.startsWith('/projects/')) {
+    const projectName = normalizedPath.replace('/projects/', '');
     if (projectName) {
-      return { cmd: 'cat', args: [projectName] };
+      return { cmd: 'cd hyeonmin/projects && vim', args: [`${projectName}.md`] };
     }
   }
 

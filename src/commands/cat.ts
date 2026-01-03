@@ -1,39 +1,43 @@
-import type { CommandDefinition } from '@/types';
-import { getProject, getProjectNames } from '@/data';
+import type { CommandDefinition, CommandResult } from '@/types';
+import { getFilesystem, normalizePath, resolvePath } from '@/data/filesystem';
 
 export const catCommand: CommandDefinition = {
   name: 'cat',
-  description: 'Display project README',
-  usage: 'cat <project-name>',
-  execute: (args) => {
+  description: 'Display file contents',
+  usage: 'cat <file>',
+  execute: (args, _flags, context): CommandResult => {
     if (args.length === 0) {
       return {
         type: 'error',
-        output: "cat: missing operand. Usage: cat <project-name>",
+        output: 'cat: missing operand. Usage: cat <file>',
       };
     }
 
-    const projectName = args[0];
-    const project = getProject(projectName);
+    const fs = getFilesystem();
+    const targetPath = normalizePath(args[0], context.cwd);
+    const node = resolvePath(targetPath, fs);
 
-    if (!project) {
-      const suggestions = getProjectNames();
+    if (!node) {
       return {
         type: 'error',
-        output: `cat: ${projectName}: No such file or directory`,
-        viewerState: {
-          type: 'error',
-          message: `'${projectName}' not found`,
-          suggestions,
-        },
+        output: `cat: ${args[0]}: No such file or directory`,
       };
     }
 
+    if (node.type === 'directory') {
+      return {
+        type: 'error',
+        output: `cat: ${args[0]}: Is a directory`,
+      };
+    }
+
+    // Get file content
+    const content = typeof node.content === 'function' ? node.content() : node.content;
+
+    // cat only outputs to terminal, no viewer change
     return {
       type: 'success',
-      output: `Displaying README for ${projectName}...`,
-      viewerState: { type: 'project', name: projectName },
-      urlPath: `/projects/${projectName}`,
+      output: content || '(empty file)',
     };
   },
 };

@@ -17,6 +17,8 @@ export interface CompletionContext {
   prefix: string;
   /** 커서가 줄 끝에 있는지 */
   atEnd: boolean;
+  /** 현재 작업 디렉토리 */
+  cwd: string;
 }
 
 export interface CompletionResult {
@@ -37,7 +39,7 @@ export type Completer = (ctx: CompletionContext) => CompletionResult | null;
 /**
  * 입력 버퍼에서 CompletionContext 생성
  */
-export function createContext(buffer: string): CompletionContext {
+export function createContext(buffer: string, cwd: string = '/home/guest'): CompletionContext {
   const trimmed = buffer.trimStart();
   const endsWithSpace = buffer.endsWith(' ') && buffer.length > 0;
 
@@ -56,5 +58,6 @@ export function createContext(buffer: string): CompletionContext {
     current,
     prefix,
     atEnd: true, // 일단 항상 true (커서 위치 추적은 별도)
+    cwd,
   };
 }

@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## Language
+
+You must say korean
+
 ## 프로젝트 개요
 
 듀얼 패널(터미널 + 뷰어) 구조의 CLI 스타일 포트폴리오 사이트.
@@ -31,7 +35,8 @@ pnpm fetch-data   # GitHub 데이터 수동 fetch
 
 ## 테스트
 
-브라우저 테스트가 필요한 경우 Playwright MCP를 사용해 `http://localhost:5173`에서 테스트하세요.
+- 브라우저 테스트가 필요한 경우 Playwright MCP를 사용해 `http://localhost:5173`에서 테스트하세요.
+- `pnpm test` 로 e2e 테스트
 
 ## 참고 문서
 

@@ -29,7 +29,7 @@ export const _arguments: Completer = (ctx: CompletionContext): CompletionResult 
   }
 
   // 완성 후보 생성
-  const completions = config.generate(ctx.prefix);
+  const completions = config.generate(ctx.prefix, ctx.cwd);
 
   if (completions.length === 0) {
     return null;

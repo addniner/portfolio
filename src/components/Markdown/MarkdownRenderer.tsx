@@ -19,20 +19,29 @@ export function MarkdownRenderer({ content, streaming = true }: MarkdownRenderer
       return;
     }
 
+    let cancelled = false;
     setDisplayedContent('');
     const lines = content.split('\n');
     let currentLine = 0;
 
     const timer = setInterval(() => {
+      if (cancelled) {
+        clearInterval(timer);
+        return;
+      }
       if (currentLine < lines.length) {
-        setDisplayedContent((prev) => prev + (currentLine > 0 ? '\n' : '') + lines[currentLine]);
+        const line = lines[currentLine] ?? '';
+        setDisplayedContent((prev) => prev + (currentLine > 0 ? '\n' : '') + line);
         currentLine++;
       } else {
         clearInterval(timer);
       }
     }, 10);
 
-    return () => clearInterval(timer);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, [content, streaming]);
 
   return (

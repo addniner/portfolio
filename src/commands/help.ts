@@ -24,7 +24,6 @@ Tips:
     return {
       type: 'success',
       output,
-      viewerState: { type: 'help' },
     };
   },
 };

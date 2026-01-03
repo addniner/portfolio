@@ -7,7 +7,6 @@ export const clearCommand: CommandDefinition = {
   execute: () => {
     return {
       type: 'silent',
-      viewerState: { type: 'welcome' },
     };
   },
 };

@@ -1,14 +1,8 @@
-import { parse } from 'shell-quote';
+import { parse, type ParseEntry } from 'shell-quote';
 import type { ParsedCommand } from '@/types';
 
-export function parseCommand(input: string): ParsedCommand {
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return { command: '', args: [], flags: {}, raw: '' };
-  }
-
-  const tokens = parse(trimmed);
-  const command = String(tokens[0] || '');
+function parseSingleCommand(tokens: ParseEntry[], raw: string): ParsedCommand {
+  const command = typeof tokens[0] === 'string' ? tokens[0] : '';
   const args: string[] = [];
   const flags: Record<string, boolean | string> = {};
 
@@ -30,5 +24,54 @@ export function parseCommand(input: string): ParsedCommand {
     }
   }
 
-  return { command, args, flags, raw: trimmed };
+  return { command, args, flags, raw };
+}
+
+export function parseCommand(input: string): ParsedCommand {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return { command: '', args: [], flags: {}, raw: '' };
+  }
+
+  const tokens = parse(trimmed);
+  return parseSingleCommand(tokens, trimmed);
+}
+
+// Parse commands separated by && or ;
+export function parseCommands(input: string): ParsedCommand[] {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const tokens = parse(trimmed);
+  const commands: ParsedCommand[] = [];
+  let currentTokens: ParseEntry[] = [];
+  let currentRaw: string[] = [];
+
+  for (const token of tokens) {
+    // Check for && or ; operator
+    if (typeof token === 'object' && token !== null && 'op' in token) {
+      if (token.op === '&&' || token.op === ';') {
+        if (currentTokens.length > 0) {
+          commands.push(parseSingleCommand(currentTokens, currentRaw.join(' ')));
+          currentTokens = [];
+          currentRaw = [];
+        }
+        continue;
+      }
+    }
+
+    currentTokens.push(token);
+    if (typeof token === 'string') {
+      currentRaw.push(token);
+    }
+  }
+
+  // Add the last command
+  if (currentTokens.length > 0) {
+    commands.push(parseSingleCommand(currentTokens, currentRaw.join(' ')));
+  }
+
+  return commands;
 }

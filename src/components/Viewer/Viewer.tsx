@@ -1,10 +1,12 @@
 import { useTerminalContext } from '@/context/TerminalContext';
-import { Welcome } from './Welcome';
 import { ProjectList } from './ProjectList';
 import { ProjectDetail } from './ProjectDetail';
 import { Profile } from './Profile';
 import { Help } from './Help';
 import { ErrorView } from './ErrorView';
+import { FileExplorer } from './FileExplorer';
+import { FileViewer } from './FileViewer';
+import { VimViewer } from './VimViewer';
 import { AnimatePresence, motion } from 'motion/react';
 
 export function Viewer() {
@@ -13,8 +15,12 @@ export function Viewer() {
 
   const renderContent = () => {
     switch (viewerState.type) {
-      case 'welcome':
-        return <Welcome />;
+      case 'directory':
+        return <FileExplorer path={viewerState.path} />;
+      case 'file':
+        return <FileViewer path={viewerState.path} />;
+      case 'vim':
+        return <VimViewer path={viewerState.path} />;
       case 'projects':
         return <ProjectList detailed={viewerState.detailed} />;
       case 'project':
@@ -26,7 +32,7 @@ export function Viewer() {
       case 'error':
         return <ErrorView message={viewerState.message} suggestions={viewerState.suggestions} />;
       default:
-        return <Welcome />;
+        return <FileExplorer path="/home/guest" />;
     }
   };
 

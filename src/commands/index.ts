@@ -7,6 +7,8 @@ import { openCommand } from './open';
 import { whoamiCommand } from './whoami';
 import { clearCommand } from './clear';
 import { historyCommand } from './history';
+import { vimCommand } from './vim';
+import { quitCommand } from './quit';
 
 export const commands: Record<string, CommandDefinition> = {
   help: helpCommand,
@@ -17,6 +19,11 @@ export const commands: Record<string, CommandDefinition> = {
   whoami: whoamiCommand,
   clear: clearCommand,
   history: historyCommand,
+  vim: vimCommand,
+  vi: vimCommand, // alias
+  ':q': quitCommand,
+  ':q!': quitCommand, // alias
+  ':wq': quitCommand, // alias (we don't save, just close)
 };
 
 export function getCommandNames(): string[] {

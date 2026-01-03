@@ -3,11 +3,12 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { useTerminalContext } from '@/context/TerminalContext';
-import { parseCommand } from '@/utils/commandParser';
+import { parseCommands } from '@/utils/commandParser';
 import { executeCommand as runCommand } from '@/commands';
 import { getCompletions, createContext, MenuComplete } from '@/completions';
 import { TerminalLineBuffer } from './TerminalLineBuffer';
 import { TerminalRenderer } from './TerminalRenderer';
+import { getBasename } from '@/data/filesystem';
 
 // Dracula theme for xterm
 const draculaTheme = {
@@ -35,6 +36,20 @@ const draculaTheme = {
   brightWhite: '#ffffff',
 };
 
+// Vim mode state for xterm
+interface VimState {
+  content: string;
+  lines: string[];
+  filePath: string;
+  filename: string;
+  scrollOffset: number;
+  cursorLine: number;
+  cursorCol: number;
+  commandMode: boolean;
+  commandBuffer: string;
+  message: string;
+}
+
 export function XTerminal() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -43,13 +58,17 @@ export function XTerminal() {
   const rendererRef = useRef<TerminalRenderer | null>(null);
   const currentProjectRef = useRef<string | null>(null);
   const menuCompleteRef = useRef<MenuComplete | null>(null);
+  const vimStateRef = useRef<VimState | null>(null);
+  const shellDataHandlerRef = useRef<((data: string) => void) | null>(null);
 
-  const { state, setViewerState, setCurrentProject, registerExecuteCommand } = useTerminalContext();
+  const { state, setViewerState, setCurrentProject, setCwd, setVimMode, registerExecuteCommand } = useTerminalContext();
 
   // Keep refs updated for use in callbacks
   const stateRef = useRef(state);
   const setViewerStateRef = useRef(setViewerState);
   const setCurrentProjectRef = useRef(setCurrentProject);
+  const setCwdRef = useRef(setCwd);
+  const setVimModeRef = useRef(setVimMode);
   const registerExecuteCommandRef = useRef(registerExecuteCommand);
 
   useEffect(() => {
@@ -60,8 +79,36 @@ export function XTerminal() {
   useEffect(() => {
     setViewerStateRef.current = setViewerState;
     setCurrentProjectRef.current = setCurrentProject;
+    setCwdRef.current = setCwd;
+    setVimModeRef.current = setVimMode;
     registerExecuteCommandRef.current = registerExecuteCommand;
-  }, [setViewerState, setCurrentProject, registerExecuteCommand]);
+  }, [setViewerState, setCurrentProject, setCwd, setVimMode, registerExecuteCommand]);
+
+  // Handle terminal visibility changes - fit terminal when it becomes visible
+  useEffect(() => {
+    if (state.isTerminalVisible && fitAddonRef.current && xtermRef.current) {
+      const term = xtermRef.current;
+      const fitAddon = fitAddonRef.current;
+
+      // Wait for animation to complete (300ms) plus buffer, then fit and refresh
+      const timeouts: ReturnType<typeof setTimeout>[] = [];
+
+      // After animation completes, fit and force full refresh
+      timeouts.push(setTimeout(() => {
+        fitAddon.fit();
+        // Clear and redraw entire terminal buffer to fix rendering
+        term.refresh(0, term.rows - 1);
+      }, 350));
+
+      // Extra refresh slightly later to ensure everything is correct
+      timeouts.push(setTimeout(() => {
+        fitAddon.fit();
+        term.refresh(0, term.rows - 1);
+      }, 400));
+
+      return () => timeouts.forEach(clearTimeout);
+    }
+  }, [state.isTerminalVisible]);
 
   useEffect(() => {
     if (!terminalRef.current || xtermRef.current) return;
@@ -94,11 +141,12 @@ export function XTerminal() {
     const menuComplete = new MenuComplete();
     menuCompleteRef.current = menuComplete;
 
-    // Helper: Get prompt based on current project
+    // Helper: Get prompt based on current directory
     const getPrompt = () => {
-      const project = currentProjectRef.current;
-      const path = project ? `~/${project}` : '~';
-      return `\x1b[35m${path}\x1b[0m\x1b[38;5;205m$ \x1b[0m`;
+      const cwd = stateRef.current.cwd;
+      // Display path with ~ for /home/guest
+      const displayPath = cwd.replace('/home/guest', '~');
+      return `\x1b[32mguest@portfolio\x1b[0m:\x1b[34m${displayPath}\x1b[0m$ `;
     };
 
     // Create renderer (stateless)
@@ -109,6 +157,291 @@ export function XTerminal() {
     const render = () => {
       renderer.render(lineBuffer.getState());
     };
+
+    // ========== VIM MODE FUNCTIONS ==========
+
+    // Render vim UI in xterm
+    const renderVim = () => {
+      const vimState = vimStateRef.current;
+      if (!vimState) return;
+
+      const rows = term.rows;
+      const cols = term.cols;
+      const contentRows = rows - 2; // Reserve 2 lines for status and command
+
+      // Clear screen and hide cursor
+      term.write('\x1b[?25l'); // Hide cursor
+      term.write('\x1b[2J'); // Clear screen
+      term.write('\x1b[H'); // Move to top-left
+
+      // Calculate visible lines
+      const startLine = vimState.scrollOffset;
+
+      // Render content lines with line numbers
+      for (let i = 0; i < contentRows; i++) {
+        const lineNum = startLine + i;
+        term.write(`\x1b[${i + 1};1H`); // Move to line
+
+        if (lineNum < vimState.lines.length) {
+          // Line number (yellow)
+          const lineNumStr = String(lineNum + 1).padStart(4, ' ');
+          term.write(`\x1b[33m${lineNumStr}\x1b[0m `);
+
+          // Line content (truncate if too long)
+          const line = vimState.lines[lineNum] || '';
+          const maxLineLen = cols - 6;
+          const displayLine = line.length > maxLineLen ? line.slice(0, maxLineLen - 1) + '…' : line;
+          term.write(displayLine);
+        } else {
+          // Empty line indicator (blue ~)
+          term.write(`\x1b[34m   ~\x1b[0m`);
+        }
+
+        // Clear rest of line
+        term.write('\x1b[K');
+      }
+
+      // Status line (second to last row)
+      const statusRow = rows - 1;
+      term.write(`\x1b[${statusRow};1H`);
+      term.write('\x1b[7m'); // Reverse video (inverted colors)
+
+      const filenameDisplay = `"${vimState.filename}"`;
+      const readonlyFlag = '[readonly]';
+      const lineInfo = `${vimState.lines.length}L, ${vimState.content.length}B`;
+      const posInfo = `${vimState.cursorLine + 1},${vimState.cursorCol + 1}`;
+
+      // Calculate position percentage
+      const percentage = vimState.lines.length <= contentRows ? 'All' :
+        vimState.scrollOffset === 0 ? 'Top' :
+        vimState.scrollOffset + contentRows >= vimState.lines.length ? 'Bot' :
+        `${Math.round((vimState.scrollOffset / (vimState.lines.length - contentRows)) * 100)}%`;
+
+      const leftPart = ` ${filenameDisplay} ${readonlyFlag} ${lineInfo}`;
+      const rightPart = `${posInfo}   ${percentage} `;
+      const padding = cols - leftPart.length - rightPart.length;
+
+      term.write(leftPart);
+      term.write(' '.repeat(Math.max(0, padding)));
+      term.write(rightPart);
+      term.write('\x1b[0m'); // Reset
+
+      // Command line (last row)
+      const cmdRow = rows;
+      term.write(`\x1b[${cmdRow};1H`);
+      term.write('\x1b[K'); // Clear line
+
+      if (vimState.commandMode) {
+        term.write(`:${vimState.commandBuffer}`);
+        term.write('\x1b[?25h'); // Show cursor
+      } else if (vimState.message) {
+        // Error/warning messages in red
+        if (vimState.message.startsWith('E') || vimState.message.startsWith('W')) {
+          term.write(`\x1b[31m${vimState.message}\x1b[0m`);
+        } else {
+          term.write(`\x1b[90m${vimState.message}\x1b[0m`);
+        }
+      } else {
+        term.write('\x1b[90mType :q to exit\x1b[0m');
+      }
+    };
+
+    // Enter vim mode
+    const enterVimMode = (filePath: string, content: string) => {
+      const lines = content.split('\n');
+      vimStateRef.current = {
+        content,
+        lines,
+        filePath,
+        filename: getBasename(filePath),
+        scrollOffset: 0,
+        cursorLine: 0,
+        cursorCol: 0,
+        commandMode: false,
+        commandBuffer: '',
+        message: '',
+      };
+
+      // Save alternate screen
+      term.write('\x1b[?1049h'); // Switch to alternate screen buffer
+      renderVim();
+    };
+
+    // Exit vim mode
+    const exitVimMode = () => {
+      vimStateRef.current = null;
+
+      // Restore main screen
+      term.write('\x1b[?1049l'); // Switch back to main screen buffer
+      term.write('\x1b[?25h'); // Show cursor
+
+      // Update state
+      setVimModeRef.current(null);
+      setViewerStateRef.current({ type: 'directory', path: stateRef.current.cwd });
+    };
+
+    // Handle vim input
+    const handleVimInput = (data: string) => {
+      const vimState = vimStateRef.current;
+      if (!vimState) return;
+
+      const code = data.charCodeAt(0);
+      const rows = term.rows;
+      const contentRows = rows - 2;
+
+      // Command mode
+      if (vimState.commandMode) {
+        if (code === 13) { // Enter
+          const cmd = vimState.commandBuffer.toLowerCase();
+          if (cmd === 'q' || cmd === 'q!' || cmd === 'wq' || cmd === 'wq!' || cmd === 'x') {
+            exitVimMode();
+            return;
+          } else if (cmd === 'w' || cmd.startsWith('w ')) {
+            vimState.message = "E45: 'readonly' option is set (add ! to override)";
+            vimState.commandMode = false;
+            vimState.commandBuffer = '';
+          } else {
+            vimState.message = `E492: Not an editor command: ${vimState.commandBuffer}`;
+            vimState.commandMode = false;
+            vimState.commandBuffer = '';
+          }
+          renderVim();
+          return;
+        }
+
+        if (code === 27) { // Escape
+          vimState.commandMode = false;
+          vimState.commandBuffer = '';
+          vimState.message = '';
+          renderVim();
+          return;
+        }
+
+        if (code === 127) { // Backspace
+          if (vimState.commandBuffer.length > 0) {
+            vimState.commandBuffer = vimState.commandBuffer.slice(0, -1);
+          } else {
+            vimState.commandMode = false;
+          }
+          renderVim();
+          return;
+        }
+
+        // Add character to command buffer
+        if (code >= 32 && code < 127) {
+          vimState.commandBuffer += data;
+          renderVim();
+        }
+        return;
+      }
+
+      // Normal mode
+      if (data === ':') {
+        vimState.commandMode = true;
+        vimState.commandBuffer = '';
+        vimState.message = '';
+        renderVim();
+        return;
+      }
+
+      if (code === 27) { // Escape
+        vimState.message = '';
+        renderVim();
+        return;
+      }
+
+      // Navigation
+      if (data === 'j' || data === '\x1b[B') { // Down
+        if (vimState.cursorLine < vimState.lines.length - 1) {
+          vimState.cursorLine++;
+          // Scroll if cursor goes below visible area
+          if (vimState.cursorLine >= vimState.scrollOffset + contentRows) {
+            vimState.scrollOffset = vimState.cursorLine - contentRows + 1;
+          }
+          renderVim();
+        }
+        return;
+      }
+
+      if (data === 'k' || data === '\x1b[A') { // Up
+        if (vimState.cursorLine > 0) {
+          vimState.cursorLine--;
+          // Scroll if cursor goes above visible area
+          if (vimState.cursorLine < vimState.scrollOffset) {
+            vimState.scrollOffset = vimState.cursorLine;
+          }
+          renderVim();
+        }
+        return;
+      }
+
+      if (data === 'G') { // Go to end
+        vimState.cursorLine = vimState.lines.length - 1;
+        vimState.scrollOffset = Math.max(0, vimState.lines.length - contentRows);
+        renderVim();
+        return;
+      }
+
+      if (data === 'g') { // gg - go to start (simplified)
+        vimState.cursorLine = 0;
+        vimState.scrollOffset = 0;
+        renderVim();
+        return;
+      }
+
+      if (data === ' ' || data === '\x1b[6~') { // Space or PageDown
+        vimState.scrollOffset = Math.min(
+          vimState.scrollOffset + contentRows,
+          Math.max(0, vimState.lines.length - contentRows)
+        );
+        vimState.cursorLine = Math.min(
+          vimState.scrollOffset + contentRows - 1,
+          vimState.lines.length - 1
+        );
+        renderVim();
+        return;
+      }
+
+      if (data === '\x1b[5~') { // PageUp
+        vimState.scrollOffset = Math.max(0, vimState.scrollOffset - contentRows);
+        vimState.cursorLine = vimState.scrollOffset;
+        renderVim();
+        return;
+      }
+
+      // Ctrl+D - half page down
+      if (code === 4) {
+        const halfPage = Math.floor(contentRows / 2);
+        vimState.scrollOffset = Math.min(
+          vimState.scrollOffset + halfPage,
+          Math.max(0, vimState.lines.length - contentRows)
+        );
+        vimState.cursorLine = Math.min(
+          vimState.cursorLine + halfPage,
+          vimState.lines.length - 1
+        );
+        renderVim();
+        return;
+      }
+
+      // Ctrl+U - half page up
+      if (code === 21) {
+        const halfPage = Math.floor(contentRows / 2);
+        vimState.scrollOffset = Math.max(0, vimState.scrollOffset - halfPage);
+        vimState.cursorLine = Math.max(0, vimState.cursorLine - halfPage);
+        renderVim();
+        return;
+      }
+
+      // Editing attempts - show readonly message
+      if (['i', 'I', 'a', 'A', 'o', 'O', 's', 'S', 'c', 'C', 'r', 'R', 'x', 'X', 'd', 'D', 'p', 'P'].includes(data)) {
+        vimState.message = 'W10: Warning: Changing a readonly file';
+        renderVim();
+        return;
+      }
+    };
+
+    // ========== SHELL MODE FUNCTIONS ==========
 
     // Update hint based on current input (uses Zsh-style completion system)
     const updateHint = () => {
@@ -122,10 +455,11 @@ export function XTerminal() {
         return;
       }
 
-      const completions = getCompletions(buffer);
+      const cwd = stateRef.current.cwd;
+      const completions = getCompletions(buffer, cwd);
       if (completions.length === 1) {
         const completion = completions[0];
-        const ctx = createContext(buffer);
+        const ctx = createContext(buffer, cwd);
         const hint = completion.slice(ctx.prefix.length);
         lineBuffer.setHint(hint);
       } else {
@@ -137,7 +471,8 @@ export function XTerminal() {
     // Apply autocomplete (Tab) - uses Zsh-style MenuComplete
     const applyAutocomplete = () => {
       const buffer = lineBuffer.getBuffer();
-      const result = menuComplete.complete(buffer);
+      const cwd = stateRef.current.cwd;
+      const result = menuComplete.complete(buffer, cwd);
 
       if (!result) return;
 
@@ -164,44 +499,116 @@ export function XTerminal() {
     // Handle command execution
     const handleCommand = (input: string, options?: { silent?: boolean }) => {
       const silent = options?.silent ?? false;
-      const parsed = parseCommand(input);
 
-      // Handle clear command
-      if (parsed.command === 'clear') {
-        renderer.clearForCommand();
-        renderer.writePrompt();
-        setViewerStateRef.current({ type: 'welcome' });
+      // Parse commands (supports && and ; chaining)
+      const parsedCommands = parseCommands(input);
+
+      if (parsedCommands.length === 0) {
+        if (!silent) {
+          renderer.writePrompt();
+        }
         return;
       }
 
-      const result = runCommand(parsed, {
-        currentProject: currentProjectRef.current,
-        previousState: stateRef.current.viewerState,
-        getHistory: () => lineBuffer.getHistory(),
-      });
-
-      if (result.output && !silent) {
-        renderer.writeOutput(result.output);
+      // Handle clear command (special case)
+      if (parsedCommands.length === 1 && parsedCommands[0].command === 'clear') {
+        renderer.clearForCommand();
+        renderer.writePrompt();
+        return;
       }
 
-      if (result.viewerState) {
-        setViewerStateRef.current(result.viewerState);
+      // Execute commands in sequence, passing cwd between them
+      let currentCwd = stateRef.current.cwd;
+      let lastResult: ReturnType<typeof runCommand> | null = null;
+      let lastUrlPath: string | undefined;
+      let lastViewerState: ReturnType<typeof runCommand>['viewerState'] = undefined;
+      let shouldClear = false;
+
+      for (const parsed of parsedCommands) {
+        if (!parsed.command) continue;
+
+        // Handle clear command in chain
+        if (parsed.command === 'clear') {
+          shouldClear = true;
+          continue;
+        }
+
+        const result = runCommand(parsed, {
+          cwd: currentCwd,
+          currentProject: currentProjectRef.current,
+          previousState: stateRef.current.viewerState,
+          getHistory: () => lineBuffer.getHistory(),
+        });
+
+        // Output only for errors, not for chained commands
+        if (result.output && !silent && result.type === 'error') {
+          renderer.writeOutput(result.output);
+          // Stop execution on error for && chains
+          break;
+        }
+
+        // Update cwd for next command in chain
+        if (result.newCwd) {
+          currentCwd = result.newCwd;
+        }
+
+        // Track last successful result
+        lastResult = result;
+        if (result.urlPath) {
+          lastUrlPath = result.urlPath;
+        }
+
+        // Accumulate viewerState from chain (later commands override earlier ones)
+        if (result.viewerState) {
+          lastViewerState = result.viewerState;
+        }
+
+        // Handle cd project tracking
+        if (parsed.command === 'cd') {
+          const newProject = parsed.args[0] && parsed.args[0] !== '~' && parsed.args[0] !== '/' && parsed.args[0] !== '..'
+            ? parsed.args[0]
+            : null;
+          currentProjectRef.current = newProject;
+          setCurrentProjectRef.current(newProject);
+        }
       }
 
-      if (parsed.command === 'cd') {
-        const newProject = parsed.args[0] && parsed.args[0] !== '~' && parsed.args[0] !== '/' && parsed.args[0] !== '..'
-          ? parsed.args[0]
-          : null;
-        currentProjectRef.current = newProject;
-        setCurrentProjectRef.current(newProject);
+      // Handle clear if it was in the chain
+      if (shouldClear) {
+        renderer.clearForCommand();
       }
 
-      if (!silent && result.urlPath) {
-        window.history.pushState(
-          { cmd: parsed.command, args: parsed.args },
-          '',
-          result.urlPath
-        );
+      // Apply final state from chain
+      if (lastResult) {
+        if (lastResult.output && !silent && lastResult.type !== 'error') {
+          renderer.writeOutput(lastResult.output);
+        }
+
+        if (lastViewerState) {
+          setViewerStateRef.current(lastViewerState);
+        }
+
+        // Handle vim mode - enter vim in xterm
+        if (lastResult.vimMode) {
+          setVimModeRef.current(lastResult.vimMode);
+          enterVimMode(lastResult.vimMode.filePath, lastResult.vimMode.content);
+          return; // Don't write prompt, we're in vim now
+        }
+
+        // Update cwd with final value
+        if (currentCwd !== stateRef.current.cwd) {
+          // Update ref immediately so prompt uses correct cwd
+          stateRef.current = { ...stateRef.current, cwd: currentCwd };
+          setCwdRef.current(currentCwd);
+        }
+
+        if (!silent && lastUrlPath) {
+          window.history.pushState(
+            { cmd: parsedCommands[parsedCommands.length - 1].command, args: parsedCommands[parsedCommands.length - 1].args },
+            '',
+            lastUrlPath
+          );
+        }
       }
 
       if (!silent) {
@@ -209,23 +616,8 @@ export function XTerminal() {
       }
     };
 
-    // Register executeCommand for external use
-    registerExecuteCommandRef.current((cmd: string, options?: { silent?: boolean }) => {
-      if (!options?.silent) {
-        term.write(cmd);
-        term.writeln('');
-      }
-      handleCommand(cmd, options);
-    });
-
-    // Welcome message
-    term.writeln('\x1b[32mPORTFOLIO OS v1.0.0\x1b[0m');
-    term.writeln('\x1b[90mType \'help\' for commands.\x1b[0m');
-    term.writeln('');
-    renderer.writePrompt();
-
-    // Handle input
-    term.onData((data) => {
+    // Shell input handler
+    const handleShellInput = (data: string) => {
       const code = data.charCodeAt(0);
 
       // Tab - autocomplete
@@ -243,13 +635,21 @@ export function XTerminal() {
       // Enter
       if (code === 13) {
         const input = lineBuffer.getBuffer();
-        const state = lineBuffer.getState();
+        const bufferState = lineBuffer.getState();
 
-        if (input.trim() === 'clear') {
+        // Check if input contains 'clear' command (either alone or in chain)
+        const hasClear = input.trim() === 'clear' ||
+          input.includes('&& clear') ||
+          input.includes('; clear') ||
+          input.includes('&&clear') ||
+          input.includes(';clear');
+
+        if (hasClear) {
+          // Don't finalize line - clear will wipe everything anyway
           lineBuffer.submit();
           handleCommand(input);
         } else {
-          renderer.finalizeLine(state);
+          renderer.finalizeLine(bufferState);
           lineBuffer.submit();
           handleCommand(input);
         }
@@ -391,11 +791,42 @@ export function XTerminal() {
         lineBuffer.insert(data);
         updateHint();
       }
+    };
+
+    // Save shell handler reference
+    shellDataHandlerRef.current = handleShellInput;
+
+    // Register executeCommand for external use
+    registerExecuteCommandRef.current((cmd: string, options?: { silent?: boolean }) => {
+      if (!options?.silent) {
+        term.write(cmd);
+        term.writeln('');
+      }
+      handleCommand(cmd, options);
+    });
+
+    // Welcome message
+    term.writeln('\x1b[32mPORTFOLIO OS v1.0.0\x1b[0m');
+    term.writeln('\x1b[90mType \'help\' for commands.\x1b[0m');
+    term.writeln('');
+    renderer.writePrompt();
+
+    // Main input handler - routes to vim or shell
+    term.onData((data) => {
+      if (vimStateRef.current) {
+        handleVimInput(data);
+      } else {
+        handleShellInput(data);
+      }
     });
 
     // Handle resize
     const handleResize = () => {
       fitAddon.fit();
+      // Re-render vim if active
+      if (vimStateRef.current) {
+        renderVim();
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -406,13 +837,38 @@ export function XTerminal() {
       xtermRef.current = null;
       lineBufferRef.current = null;
       rendererRef.current = null;
+      vimStateRef.current = null;
     };
   }, []);
 
   // Handle resize when container size changes
   useEffect(() => {
-    const resizeObserver = new ResizeObserver(() => {
-      fitAddonRef.current?.fit();
+    const resizeObserver = new ResizeObserver((entries) => {
+      // Only fit if the container has a reasonable width (at least 300px)
+      // This prevents fitting during close/open animations
+      const entry = entries[0];
+      if (entry && entry.contentRect.width > 300) {
+        fitAddonRef.current?.fit();
+      }
+      // Re-render vim if active
+      if (vimStateRef.current && xtermRef.current) {
+        const vimState = vimStateRef.current;
+        const term = xtermRef.current;
+        const rows = term.rows;
+        const contentRows = rows - 2;
+
+        // Clear screen and hide cursor
+        term.write('\x1b[?25l');
+        term.write('\x1b[2J');
+        term.write('\x1b[H');
+
+        // Re-render (simplified - full render would need the renderVim function)
+        // For now, just trigger re-render by updating scroll
+        vimState.scrollOffset = Math.min(
+          vimState.scrollOffset,
+          Math.max(0, vimState.lines.length - contentRows)
+        );
+      }
     });
 
     if (terminalRef.current) {
@@ -424,6 +880,74 @@ export function XTerminal() {
     };
   }, []);
 
+  // Sync vim mode from context (for external triggers like VimViewer close button)
+  useEffect(() => {
+    // If context says vim mode is null but we still have vim state, exit vim
+    if (!state.vimMode && vimStateRef.current && xtermRef.current) {
+      vimStateRef.current = null;
+      const term = xtermRef.current;
+      term.write('\x1b[?1049l'); // Switch back to main screen
+      term.write('\x1b[?25h'); // Show cursor
+    }
+    // If context says vim mode but we don't have vim state, enter vim
+    else if (state.vimMode && !vimStateRef.current && xtermRef.current) {
+      const term = xtermRef.current;
+      const lines = state.vimMode.content.split('\n');
+      vimStateRef.current = {
+        content: state.vimMode.content,
+        lines,
+        filePath: state.vimMode.filePath,
+        filename: getBasename(state.vimMode.filePath),
+        scrollOffset: 0,
+        cursorLine: 0,
+        cursorCol: 0,
+        commandMode: false,
+        commandBuffer: '',
+        message: '',
+      };
+      term.write('\x1b[?1049h'); // Switch to alternate screen
+
+      // Need to render vim - but renderVim is inside the useEffect closure
+      // So we'll do a simplified render here
+      const rows = term.rows;
+      const cols = term.cols;
+      const contentRows = rows - 2;
+      const vimState = vimStateRef.current;
+
+      term.write('\x1b[?25l');
+      term.write('\x1b[2J');
+      term.write('\x1b[H');
+
+      for (let i = 0; i < contentRows; i++) {
+        const lineNum = i;
+        term.write(`\x1b[${i + 1};1H`);
+
+        if (lineNum < vimState.lines.length) {
+          const lineNumStr = String(lineNum + 1).padStart(4, ' ');
+          term.write(`\x1b[33m${lineNumStr}\x1b[0m `);
+          const line = vimState.lines[lineNum] || '';
+          const maxLineLen = cols - 6;
+          const displayLine = line.length > maxLineLen ? line.slice(0, maxLineLen - 1) + '…' : line;
+          term.write(displayLine);
+        } else {
+          term.write(`\x1b[34m   ~\x1b[0m`);
+        }
+        term.write('\x1b[K');
+      }
+
+      // Status line
+      const statusRow = rows - 1;
+      term.write(`\x1b[${statusRow};1H\x1b[7m`);
+      const leftPart = ` "${vimState.filename}" [readonly] ${vimState.lines.length}L, ${vimState.content.length}B`;
+      const rightPart = `1,1   All `;
+      const padding = cols - leftPart.length - rightPart.length;
+      term.write(leftPart + ' '.repeat(Math.max(0, padding)) + rightPart + '\x1b[0m');
+
+      // Command line
+      term.write(`\x1b[${rows};1H\x1b[K\x1b[90mType :q to exit\x1b[0m`);
+    }
+  }, [state.vimMode]);
+
   return (
     <div className="h-full flex flex-col bg-dracula-bg">
       {/* Window Chrome */}
@@ -433,7 +957,9 @@ export function XTerminal() {
           <div className="w-3 h-3 rounded-full bg-dracula-yellow" />
           <div className="w-3 h-3 rounded-full bg-dracula-green" />
         </div>
-        <span className="text-dracula-comment text-xs ml-2">terminal</span>
+        <span className="text-dracula-comment text-xs ml-2">
+          {state.vimMode ? `vim - ${getBasename(state.vimMode.filePath)}` : 'terminal'}
+        </span>
       </div>
 
       {/* Terminal Container */}

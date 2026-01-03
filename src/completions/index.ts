@@ -58,16 +58,16 @@ const completers: Completer[] = [
  * 메인 완성 함수
  * Zsh의 _main_complete에 해당
  */
-export function getCompletions(buffer: string): string[] {
-  const result = getCompletionResult(buffer);
+export function getCompletions(buffer: string, cwd?: string): string[] {
+  const result = getCompletionResult(buffer, cwd);
   return result?.completions ?? [];
 }
 
 /**
  * 상세 결과가 필요한 경우 (타입 정보, 공통 접두사 포함)
  */
-export function getCompletionResult(buffer: string): CompletionResult | null {
-  const ctx = createContext(buffer);
+export function getCompletionResult(buffer: string, cwd?: string): CompletionResult | null {
+  const ctx = createContext(buffer, cwd);
 
   for (const completer of completers) {
     const result = completer(ctx);

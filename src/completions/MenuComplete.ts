@@ -20,6 +20,8 @@ export interface MenuState {
   originalInput: string;
   /** 원본 입력의 prefix */
   originalPrefix: string;
+  /** 현재 작업 디렉토리 */
+  cwd?: string;
 }
 
 export interface MenuCompleteResult {
@@ -39,28 +41,29 @@ export class MenuComplete {
   /**
    * Tab 키 처리
    * @param buffer 현재 입력 버퍼
+   * @param cwd 현재 작업 디렉토리
    * @returns 처리 결과
    */
-  complete(buffer: string): MenuCompleteResult | null {
+  complete(buffer: string, cwd?: string): MenuCompleteResult | null {
     // Cycling 모드
     if (this.state) {
       return this.cycleNext();
     }
 
     // 첫 번째 Tab
-    return this.firstComplete(buffer);
+    return this.firstComplete(buffer, cwd);
   }
 
   /**
    * 첫 번째 Tab 처리
    */
-  private firstComplete(buffer: string): MenuCompleteResult | null {
-    const result = getCompletionResult(buffer);
+  private firstComplete(buffer: string, cwd?: string): MenuCompleteResult | null {
+    const result = getCompletionResult(buffer, cwd);
     if (!result || result.completions.length === 0) {
       return null;
     }
 
-    const ctx = createContext(buffer);
+    const ctx = createContext(buffer, cwd);
 
     // 단일 완성
     if (result.completions.length === 1) {

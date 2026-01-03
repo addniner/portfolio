@@ -1,40 +1,64 @@
 import type { CommandDefinition, CommandResult } from '@/types';
-import { getProject } from '@/data';
+import { getFilesystem, normalizePath, resolvePathWithSymlinks } from '@/data/filesystem';
 
 export const cdCommand: CommandDefinition = {
   name: 'cd',
-  description: 'Change to project context',
-  usage: 'cd <project-name> | cd ..',
+  description: 'Change directory',
+  usage: 'cd <path> | cd .. | cd ~',
   execute: (args, _flags, context): CommandResult => {
-    if (args.length === 0 || args[0] === '~' || args[0] === '/') {
+    const fs = getFilesystem();
+
+    // cd without args -> go to home
+    if (args.length === 0) {
+      const homePath = '/home/guest';
       return {
         type: 'silent',
-        viewerState: { type: 'welcome' },
+        viewerState: { type: 'directory', path: homePath },
+        newCwd: homePath,
         urlPath: '/',
       };
     }
 
-    if (args[0] === '..') {
+    const targetPath = normalizePath(args[0], context.cwd);
+
+    // Resolve path following symlinks and get the actual path
+    const resolved = resolvePathWithSymlinks(targetPath, fs);
+
+    if (!resolved) {
       return {
-        type: 'silent',
-        viewerState: context.previousState,
+        type: 'error',
+        output: `cd: ${args[0]}: No such file or directory`,
       };
     }
 
-    const projectName = args[0];
-    const project = getProject(projectName);
-
-    if (!project) {
+    if (resolved.node.type !== 'directory') {
       return {
         type: 'error',
-        output: `cd: ${projectName}: No such file or directory`,
+        output: `cd: ${args[0]}: Not a directory`,
       };
+    }
+
+    // Use the resolved actual path (after following symlinks)
+    const actualPath = resolved.actualPath;
+
+    // Generate URL path based on filesystem location
+    let urlPath = '/';
+    if (actualPath.startsWith('/home/hyeonmin/projects/')) {
+      const projectName = actualPath.replace('/home/hyeonmin/projects/', '').split('/')[0];
+      if (projectName) {
+        urlPath = `/projects/${projectName}`;
+      } else {
+        urlPath = '/projects';
+      }
+    } else if (actualPath === '/home/hyeonmin/projects') {
+      urlPath = '/projects';
     }
 
     return {
       type: 'silent',
-      viewerState: { type: 'project', name: projectName },
-      urlPath: `/projects/${projectName}`,
+      viewerState: { type: 'directory', path: actualPath },
+      newCwd: actualPath,
+      urlPath,
     };
   },
 };

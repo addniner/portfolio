@@ -9,8 +9,6 @@ export const whoamiCommand: CommandDefinition = {
     return {
       type: 'success',
       output: profile.name,
-      viewerState: { type: 'profile' },
-      urlPath: '/about',
     };
   },
 };
