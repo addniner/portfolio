@@ -29,17 +29,22 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
   const { executeCommand } = useTerminalContext();
   const isInPath = currentPath === path || currentPath.startsWith(path + '/');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || isInPath);
+  const [userCollapsed, setUserCollapsed] = useState(false);
 
   const isDirectory = node.type === 'directory' || node.type === 'symlink';
   const isSymlink = node.type === 'symlink';
   const isActive = currentPath === path;
 
-  // Auto-expand if current path is inside this directory
+  // Auto-expand if current path is inside this directory (but respect user's collapse choice)
   useEffect(() => {
-    if (isInPath && !isExpanded) {
+    if (isInPath && !isExpanded && !userCollapsed) {
       setIsExpanded(true);
     }
-  }, [isInPath, isExpanded]);
+    // Reset userCollapsed when navigating away from this path
+    if (!isInPath && userCollapsed) {
+      setUserCollapsed(false);
+    }
+  }, [isInPath, isExpanded, userCollapsed]);
 
   const handleClick = () => {
     if (isDirectory) {
@@ -51,7 +56,14 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsExpanded(!isExpanded);
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+    // Track if user explicitly collapsed this folder
+    if (!newExpanded) {
+      setUserCollapsed(true);
+    } else {
+      setUserCollapsed(false);
+    }
   };
 
   // Get visible children (exclude hidden files)
@@ -72,8 +84,7 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
 
   return (
     <div>
-      <button
-        onClick={handleClick}
+      <div
         className={cn(
           'w-full flex items-center gap-2 py-1.5 px-3 rounded-lg text-sm',
           'transition-all duration-200',
@@ -83,11 +94,12 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
         )}
         style={{ paddingLeft: `${depth * 16 + 12}px` }}
       >
-        {/* Expand/Collapse toggle */}
+        {/* Expand/Collapse toggle - separate button */}
         {isDirectory && children.length > 0 ? (
-          <span
+          <button
             onClick={handleToggle}
-            className="p-0.5 -ml-1 hover:bg-accent rounded"
+            className="p-0.5 -ml-1 hover:bg-secondary rounded shrink-0"
+            aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
           >
             <ChevronRight
               className={cn(
@@ -95,29 +107,35 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
                 isExpanded && 'rotate-90'
               )}
             />
-          </span>
+          </button>
         ) : (
-          <span className="w-4" />
+          <span className="w-4 shrink-0" />
         )}
 
-        {/* Icon */}
-        {isDirectory ? (
-          <Folder className={cn('w-4 h-4 shrink-0', isActive || isInPath ? iconColor : '')} />
-        ) : (
-          <FileText className={cn(
-            'w-4 h-4 shrink-0',
-            isActive ? 'text-green-400' : ''
-          )} />
-        )}
+        {/* Clickable area for navigation */}
+        <button
+          onClick={handleClick}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left"
+        >
+          {/* Icon */}
+          {isDirectory ? (
+            <Folder className={cn('w-4 h-4 shrink-0', isActive || isInPath ? iconColor : '')} />
+          ) : (
+            <FileText className={cn(
+              'w-4 h-4 shrink-0',
+              isActive ? 'text-green-400' : ''
+            )} />
+          )}
 
-        {/* Name */}
-        <span className="truncate">{node.name}</span>
+          {/* Name */}
+          <span className="truncate">{node.name}</span>
 
-        {/* Symlink indicator */}
-        {isSymlink && (
-          <ExternalLink className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-        )}
-      </button>
+          {/* Symlink indicator */}
+          {isSymlink && (
+            <ExternalLink className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+          )}
+        </button>
+      </div>
 
       {/* Children */}
       {isDirectory && isExpanded && children.length > 0 && (
