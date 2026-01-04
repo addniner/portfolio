@@ -107,6 +107,28 @@
   --color-window-bg: var(--window-bg);
   --color-window-border: var(--window-border);
   --color-window-shadow: var(--window-shadow);
+
+  /* Backdrop (for modals/overlays) */
+  --color-backdrop: var(--backdrop);
+
+  /* Shadow colors */
+  --color-shadow: var(--shadow-color);
+  --color-shadow-strong: var(--shadow-color-strong);
+
+  /* Decoration Colors */
+  --color-decoration-primary: var(--decoration-primary);
+  --color-decoration-secondary: var(--decoration-secondary);
+
+  /* Focus Ring */
+  --color-focus-ring: var(--focus-ring);
+
+  /* Traffic Light Buttons (macOS window controls) */
+  --color-traffic-close: #ff5f57;
+  --color-traffic-close-icon: #8b0000;
+  --color-traffic-minimize: #febc2e;
+  --color-traffic-minimize-icon: #8b6914;
+  --color-traffic-maximize: #28c840;
+  --color-traffic-maximize-icon: #006400;
 }
 
 /* ============================================
@@ -180,6 +202,20 @@
   --window-bg: oklch(1 0 0 / 80%);
   --window-border: oklch(0 0 0 / 12%);
   --window-shadow: oklch(0 0 0 / 15%);
+
+  /* Backdrop - Light */
+  --backdrop: oklch(0 0 0 / 40%);
+
+  /* Shadow colors - Light */
+  --shadow-color: oklch(0 0 0 / 10%);
+  --shadow-color-strong: oklch(0 0 0 / 20%);
+
+  /* Decoration colors - Light */
+  --decoration-primary: oklch(0.6 0.2 270 / 5%);
+  --decoration-secondary: oklch(0.55 0.15 230 / 5%);
+
+  /* Focus ring - Light */
+  --focus-ring: oklch(0.6 0.2 270 / 50%);
 
   /* Background gradient for depth */
   --bg-gradient-from: oklch(0.96 0.02 270);
@@ -255,6 +291,20 @@
   --window-bg: oklch(0.15 0.02 270 / 85%);
   --window-border: oklch(1 0 0 / 15%);
   --window-shadow: oklch(0 0 0 / 40%);
+
+  /* Backdrop - Dark */
+  --backdrop: oklch(0 0 0 / 60%);
+
+  /* Shadow colors - Dark */
+  --shadow-color: oklch(0 0 0 / 30%);
+  --shadow-color-strong: oklch(0 0 0 / 50%);
+
+  /* Decoration colors - Dark */
+  --decoration-primary: oklch(0.7 0.2 270 / 10%);
+  --decoration-secondary: oklch(0.65 0.18 230 / 10%);
+
+  /* Focus ring - Dark */
+  --focus-ring: oklch(0.7 0.2 270 / 50%);
 
   /* Background gradient for depth */
   --bg-gradient-from: oklch(0.12 0.03 280);

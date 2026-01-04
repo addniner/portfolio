@@ -1,12 +1,7 @@
-import {
-  getFilesystem,
-  resolvePath,
-  getBasename,
-} from '@/data/filesystem';
-import { getFileContent } from '@/lib/fileContent';
 import { MarkdownRenderer } from '@/components/Markdown/MarkdownRenderer';
-import { FileText, FileCode, X, Minus, Maximize2, ChevronLeft } from 'lucide-react';
-import { useTerminalContext } from '@/context/TerminalContext';
+import { FileText, FileCode, ChevronLeft } from 'lucide-react';
+import { WindowHeader } from '@/components/ui/WindowHeader';
+import { useShell } from '@/hooks/useShell';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -25,22 +20,21 @@ function getFileIcon(filename: string) {
 }
 
 export function VimViewer({ path }: VimViewerProps) {
-  const { setVimMode, setViewerPath, state } = useTerminalContext();
+  const { exitEditor, cwd, shell } = useShell();
   const isMobile = useIsMobile();
-  const fs = getFilesystem();
-  const node = resolvePath(path, fs);
-  const filename = getBasename(path);
+  const node = shell.resolvePath(path);
+  const filename = shell.getBasename(path);
 
   const handleClose = () => {
-    setVimMode(null);
-    setViewerPath(state.cwd);
+    exitEditor();
+    shell.setViewPath(cwd);
   };
 
   if (!node || node.type === 'directory') {
     return null;
   }
 
-  const content = getFileContent(node);
+  const content = shell.getFileContent(node);
   const isMarkdown = filename.endsWith('.md');
 
   // 모바일: 전체 화면
@@ -107,17 +101,14 @@ export function VimViewer({ path }: VimViewerProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="absolute inset-0 z-50 flex items-center justify-center p-4 md:p-6"
+      className="absolute inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-8"
     >
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={cn(
-          "absolute inset-0 backdrop-blur-sm",
-          "bg-black/40 dark:bg-black/60"
-        )}
+        className="absolute inset-0 backdrop-blur-sm bg-backdrop"
         onClick={handleClose}
       />
 
@@ -130,55 +121,29 @@ export function VimViewer({ path }: VimViewerProps) {
         className={cn(
           'relative w-full max-w-3xl max-h-[85vh] flex flex-col',
           'rounded-2xl overflow-hidden',
-          'shadow-2xl',
+          'shadow-2xl shadow-shadow-strong',
           'bg-card border border-border',
-          'shadow-black/10 dark:shadow-black/50',
           'backdrop-blur-xl'
         )}
       >
         {/* macOS-style title bar */}
-        <div className={cn(
-          "flex items-center gap-3 px-4 py-3 border-b",
-          "bg-muted/50 border-border"
-        )}>
-          {/* Traffic lights */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleClose}
-              aria-label="Close file viewer"
-              className="group w-3 h-3 rounded-full bg-[#ff5f57] hover:bg-[#ff5f57]/80 transition-colors flex items-center justify-center"
-              title="Close"
-            >
-              <X className="w-2 h-2 text-[#8b0000] opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-            <button
-              className="w-3 h-3 rounded-full bg-[#febc2e] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center"
-              title="Minimize"
-            >
-              <Minus className="w-2 h-2 text-[#8b6914] opacity-0 hover:opacity-100 transition-opacity" />
-            </button>
-            <button
-              className="w-3 h-3 rounded-full bg-[#28c840] hover:bg-[#28c840]/80 transition-colors flex items-center justify-center"
-              title="Maximize"
-            >
-              <Maximize2 className="w-1.5 h-1.5 text-[#006400] opacity-0 hover:opacity-100 transition-opacity" />
-            </button>
-          </div>
-
-          {/* File info - centered */}
-          <div className="flex-1 flex items-center justify-center gap-2 text-muted-foreground">
-            {getFileIcon(filename)}
-            <span id="vim-viewer-title" className="text-sm font-medium text-foreground">{filename}</span>
-          </div>
-
-          {/* Spacer for symmetry */}
-          <div className="w-13" />
-        </div>
+        <WindowHeader
+          titleId="vim-viewer-title"
+          onClose={handleClose}
+          centerContent={
+            <div className="flex items-center gap-2">
+              {getFileIcon(filename)}
+              <span id="vim-viewer-title" className="text-sm font-medium text-foreground">
+                {filename}
+              </span>
+            </div>
+          }
+        />
 
         {/* Content area */}
         <div className="flex-1 overflow-y-auto bg-card">
           {isMarkdown ? (
-            <div className="p-6 md:p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
               <MarkdownRenderer content={content || ''} />
             </div>
           ) : (

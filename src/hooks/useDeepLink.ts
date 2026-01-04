@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { cmd } from '@/lib/commands';
+import type { Action } from '@/lib/actions';
+import { actionToCommand } from '@/lib/actions';
 
-function getCommandFromUrl(pathname: string): string | null {
+function getActionFromUrl(pathname: string): Action | null {
   // Remove base path if present
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   const normalizedPath = pathname.startsWith(basePath)
@@ -13,17 +14,17 @@ function getCommandFromUrl(pathname: string): string | null {
   }
 
   if (normalizedPath === '/projects') {
-    return cmd.cd('hyeonmin/projects');
+    return { type: 'LIST_PROJECTS' };
   }
 
   if (normalizedPath === '/about') {
-    return cmd.chain(cmd.cd('hyeonmin'), cmd.vim('about.md'));
+    return { type: 'OPEN_FILE', path: 'hyeonmin/about.md' };
   }
 
   if (normalizedPath.startsWith('/projects/')) {
     const projectName = normalizedPath.replace('/projects/', '');
     if (projectName) {
-      return cmd.chain(cmd.cd('hyeonmin/projects'), cmd.vim(`${projectName}.md`));
+      return { type: 'OPEN_PROJECT', name: projectName };
     }
   }
 
@@ -43,8 +44,9 @@ export function useDeepLink(
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    const command = getCommandFromUrl(window.location.pathname);
-    if (command) {
+    const action = getActionFromUrl(window.location.pathname);
+    if (action) {
+      const command = actionToCommand(action);
       executeCommandRef.current(command, { silent: true });
     }
   }, []);
@@ -58,8 +60,9 @@ export function useDeepLink(
         executeCommandRef.current(fullCommand, { silent: true });
       } else {
         // Handle direct navigation (no state)
-        const command = getCommandFromUrl(window.location.pathname);
-        if (command) {
+        const action = getActionFromUrl(window.location.pathname);
+        if (action) {
+          const command = actionToCommand(action);
           executeCommandRef.current(command, { silent: true });
         }
       }

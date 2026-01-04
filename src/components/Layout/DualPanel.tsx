@@ -62,8 +62,8 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
       <div className={cn(
         'h-full w-full',
         'flex flex-row',
-        'p-4 gap-4',
-        'pb-20' // Space for dock
+        'p-4 gap-4 lg:p-6 lg:gap-6',
+        'pb-20 lg:pb-24' // Space for dock
       )}>
         {/* Viewer Window */}
         <div

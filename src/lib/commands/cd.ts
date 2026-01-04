@@ -1,5 +1,5 @@
 import type { CommandDefinition, CommandResult } from '@/types';
-import { getFilesystem, normalizePath, resolvePathWithSymlinks } from '@/data/filesystem';
+import { getFilesystem, normalizePath, resolvePathWithSymlinks } from '@/lib/filesystem';
 
 export const cdCommand: CommandDefinition = {
   name: 'cd',

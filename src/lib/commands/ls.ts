@@ -1,5 +1,5 @@
 import type { CommandDefinition, CommandResult } from '@/types';
-import { getFilesystem, normalizePath, resolvePath, listDirectory } from '@/data/filesystem';
+import { getFilesystem, normalizePath, resolvePath, listDirectory } from '@/lib/filesystem';
 
 export const lsCommand: CommandDefinition = {
   name: 'ls',

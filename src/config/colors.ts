@@ -1,4 +1,4 @@
-// Color mapping for folder icons in FileExplorer
+// Gradient colors for folder backgrounds in FileExplorer grid view
 export const FOLDER_COLORS: Record<string, string> = {
   home: 'from-amber-400 to-orange-500',
   guest: 'from-blue-400 to-blue-600',
@@ -7,6 +7,14 @@ export const FOLDER_COLORS: Record<string, string> = {
   usr: 'from-gray-400 to-gray-600',
   bin: 'from-cyan-400 to-cyan-600',
   etc: 'from-gray-400 to-gray-600',
+};
+
+// Icon colors for folder icons in FileTree sidebar
+export const FOLDER_ICON_COLORS: Record<string, string> = {
+  home: 'text-blue-400',
+  guest: 'text-blue-400',
+  hyeonmin: 'text-purple-400',
+  projects: 'text-green-400',
 };
 
 // File extension colors in FileExplorer

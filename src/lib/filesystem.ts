@@ -1,37 +1,8 @@
-import type { LucideIcon } from 'lucide-react';
-import { Folder, FileText, User, HelpCircle, File } from 'lucide-react';
-import { getProjects } from './index';
-import { profile } from './profile';
-import type { Project } from '@/types/project';
-import filesystemJSON from './filesystem.json';
-import type { FSNodeJSON, FilesystemJSON } from './filesystem.schema';
-
-// File system node types
-export type FSNodeType = 'directory' | 'file' | 'executable' | 'symlink';
-
-// FSNode 메타데이터 타입
-export interface FSNodeMeta {
-  project?: Project;
-}
-
-export interface FSNode {
-  name: string;
-  type: FSNodeType;
-  icon?: LucideIcon;
-  children?: Record<string, FSNode>;
-  content?: string | (() => string);
-  meta?: FSNodeMeta;
-  target?: string;
-}
-
-// Icon mapping from string to LucideIcon
-const ICON_MAP: Record<string, LucideIcon> = {
-  Folder,
-  FileText,
-  User,
-  HelpCircle,
-  File,
-};
+import { Folder, FileText } from 'lucide-react';
+import { getProjects, profile } from '@/data';
+import filesystemJSON from '../data/filesystem.json';
+import { ICON_MAP } from '@/config/filesystem';
+import type { FSNode, FSNodeJSON, FilesystemJSON } from '@/types/filesystem';
 
 // Generate profile content
 function generateProfileContent(): string {
@@ -221,4 +192,14 @@ export function listDirectory(path: string, fs: FSNode): FSNode[] | null {
     return null;
   }
   return Object.values(node.children);
+}
+
+/**
+ * FSNode에서 파일 내용을 추출합니다.
+ * content가 함수인 경우 호출하여 결과를 반환하고,
+ * 문자열인 경우 그대로 반환합니다.
+ */
+export function getFileContent(node: FSNode): string {
+  if (!node.content) return '';
+  return typeof node.content === 'function' ? node.content() : node.content;
 }

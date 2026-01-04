@@ -1,21 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronRight, Folder, FileText, ExternalLink, Home, User, FolderKanban } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getFilesystem, type FSNode } from '@/data/filesystem';
-import { useTerminalContext } from '@/context/TerminalContext';
-import { cmd } from '@/lib/commands';
+import { useShell } from '@/hooks/useShell';
+import { useAction } from '@/hooks/useAction';
+import type { FSNode } from '@/types/filesystem';
+import { FOLDER_ICON_COLORS } from '@/config/colors';
 
 interface FileTreeProps {
   currentPath: string;
 }
-
-// Folder colors for specific folders
-const FOLDER_ICON_COLORS: Record<string, string> = {
-  home: 'text-blue-400',
-  guest: 'text-blue-400',
-  hyeonmin: 'text-purple-400',
-  projects: 'text-green-400',
-};
 
 interface TreeNodeProps {
   node: FSNode;
@@ -26,7 +19,7 @@ interface TreeNodeProps {
 }
 
 function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: TreeNodeProps) {
-  const { executeCommand } = useTerminalContext();
+  const { dispatch } = useAction();
   const isInPath = currentPath === path || currentPath.startsWith(path + '/');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || isInPath);
   const [userCollapsed, setUserCollapsed] = useState(false);
@@ -48,9 +41,9 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
 
   const handleClick = () => {
     if (isDirectory) {
-      executeCommand(cmd.chain(cmd.cd(path), cmd.ls()));
+      dispatch({ type: 'NAVIGATE', path });
     } else {
-      executeCommand(cmd.vim(path));
+      dispatch({ type: 'OPEN_FILE', path });
     }
   };
 
@@ -123,7 +116,7 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
           ) : (
             <FileText className={cn(
               'w-4 h-4 shrink-0',
-              isActive ? 'text-green-400' : ''
+              isActive ? 'text-success' : ''
             )} />
           )}
 
@@ -161,8 +154,9 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
 }
 
 export function FileTree({ currentPath }: FileTreeProps) {
-  const { executeCommand } = useTerminalContext();
-  const fs = getFilesystem();
+  const { shell } = useShell();
+  const { dispatch } = useAction();
+  const fs = shell.getFilesystem().getRoot();
 
   // Start from root, but expand home/guest by default
   const rootChildren = useMemo(() => {
@@ -179,14 +173,14 @@ export function FileTree({ currentPath }: FileTreeProps) {
   }, [fs.children]);
 
   const handleQuickNav = (path: string) => {
-    executeCommand(cmd.chain(cmd.cd(path), cmd.ls()));
+    dispatch({ type: 'NAVIGATE', path });
   };
 
   // Quick access items
   const quickItems = [
-    { label: 'Home', icon: Home, path: '~', color: 'text-blue-400' },
-    { label: 'hyeonmin', icon: User, path: '/home/hyeonmin', color: 'text-purple-400' },
-    { label: 'Projects', icon: FolderKanban, path: '/home/hyeonmin/projects', color: 'text-green-400' },
+    { label: 'Home', icon: Home, path: '~', color: 'text-info' },
+    { label: 'hyeonmin', icon: User, path: '/home/hyeonmin', color: 'text-primary' },
+    { label: 'Projects', icon: FolderKanban, path: '/home/hyeonmin/projects', color: 'text-success' },
   ];
 
   const isActivePath = (itemPath: string) => {

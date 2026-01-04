@@ -10,7 +10,7 @@
  */
 
 import { getProjectNames } from '@/data';
-import { getFilesystem, resolvePath } from '@/data/filesystem';
+import { getFilesystem, resolvePath } from '@/lib/filesystem';
 
 /**
  * 명령어별 completer 매핑

@@ -1,6 +1,5 @@
 import type { CommandDefinition, CommandResult } from '@/types';
-import { getFilesystem, normalizePath, resolvePath } from '@/data/filesystem';
-import { getFileContent } from '@/lib/fileContent';
+import { getFilesystem, normalizePath, resolvePath, getFileContent } from '@/lib/filesystem';
 
 export const vimCommand: CommandDefinition = {
   name: 'vim',

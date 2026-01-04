@@ -1,27 +1,24 @@
 import { useMemo } from 'react';
-import { useTerminalContext } from '@/context/TerminalContext';
+import { useShell } from '@/hooks/useShell';
 import { FileExplorer } from './FileExplorer';
 import { VimViewer } from './VimViewer';
 import { AnimatePresence, motion } from 'motion/react';
-import { getFilesystem, resolvePath } from '@/data/filesystem';
 
 export function Viewer() {
-  const { state } = useTerminalContext();
-  const { viewerPath, vimMode } = state;
-  const fs = getFilesystem();
-  const node = resolvePath(viewerPath, fs);
+  const { viewPath, editorMode, cwd, shell } = useShell();
+  const node = shell.resolvePath(viewPath);
 
   // Determine if we should show FileExplorer or VimViewer
   const isDirectory = node?.type === 'directory';
 
   // Generate a stable key for animations
   const contentKey = useMemo(() => {
-    if (vimMode) {
+    if (editorMode) {
       // When vim is open, keep the same key to prevent FileExplorer re-animation
-      return `explorer-${state.cwd}`;
+      return `explorer-${cwd}`;
     }
-    return `${isDirectory ? 'explorer' : 'vim'}-${viewerPath}`;
-  }, [viewerPath, vimMode, isDirectory, state.cwd]);
+    return `${isDirectory ? 'explorer' : 'vim'}-${viewPath}`;
+  }, [viewPath, editorMode, isDirectory, cwd]);
 
   return (
     <div className="h-full overflow-hidden relative">
@@ -35,14 +32,14 @@ export function Viewer() {
           className="h-full"
         >
           {/* Directory → FileExplorer, File → FileExplorer (vim opens as overlay) */}
-          <FileExplorer path={isDirectory ? viewerPath : state.cwd} />
+          <FileExplorer path={isDirectory ? viewPath : cwd} />
         </motion.div>
       </AnimatePresence>
 
       {/* VimViewer overlay - shown on top of FileExplorer when viewing a file */}
       <AnimatePresence>
-        {vimMode && (
-          <VimViewer path={vimMode.filePath} />
+        {editorMode && (
+          <VimViewer path={editorMode.filePath} />
         )}
       </AnimatePresence>
     </div>

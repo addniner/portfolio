@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useShell } from '@/hooks/useShell';
 import { useTerminalContext } from '@/context/TerminalContext';
-import {
-  getFilesystem,
-  resolvePath,
-  listDirectory,
-  type FSNode,
-} from '@/data/filesystem';
+import { useAction } from '@/hooks/useAction';
+import type { FSNode } from '@/types/filesystem';
 import {
   Folder,
   FileText,
@@ -17,7 +14,6 @@ import {
   PanelLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { cmd } from '@/lib/commands';
 import { motion, AnimatePresence } from 'motion/react';
 import { useIsMobileWithInit } from '@/hooks/useMediaQuery';
 import { FOLDER_COLORS, FILE_COLORS } from '@/config/colors';
@@ -28,7 +24,9 @@ interface FileExplorerProps {
 }
 
 export function FileExplorer({ path }: FileExplorerProps) {
-  const { executeCommand, toggleViewer } = useTerminalContext();
+  const { shell } = useShell();
+  const { toggleViewer } = useTerminalContext();
+  const { dispatch } = useAction();
   const { isMobile, initialized } = useIsMobileWithInit();
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
 
@@ -41,9 +39,8 @@ export function FileExplorer({ path }: FileExplorerProps) {
 
   // 실제 사이드바 표시 여부 (초기화 전에는 false)
   const showSidebar = isSidebarOpen === true;
-  const fs = getFilesystem();
-  const currentNode = resolvePath(path, fs);
-  const contents = listDirectory(path, fs);
+  const currentNode = shell.resolvePath(path);
+  const contents = shell.listDirectory(path);
 
   if (!currentNode || !contents) {
     return (
@@ -57,23 +54,23 @@ export function FileExplorer({ path }: FileExplorerProps) {
 
   const handleItemClick = (node: FSNode) => {
     if (node.type === 'directory' || node.type === 'symlink') {
-      executeCommand(cmd.chain(cmd.cd(node.name), cmd.ls()));
+      dispatch({ type: 'NAVIGATE', path: node.name });
     } else {
-      executeCommand(cmd.vim(node.name));
+      dispatch({ type: 'OPEN_FILE', path: node.name });
     }
   };
 
   const handleBreadcrumbClick = (index: number) => {
     const targetPath = '/' + pathParts.slice(0, index + 1).join('/');
-    executeCommand(cmd.chain(cmd.cd(targetPath), cmd.ls()));
+    dispatch({ type: 'NAVIGATE', path: targetPath });
   };
 
   const handleBackClick = () => {
-    executeCommand(cmd.chain(cmd.cd('..'), cmd.ls()));
+    dispatch({ type: 'NAVIGATE_BACK' });
   };
 
   const handleRootClick = () => {
-    executeCommand(cmd.chain(cmd.cd('/'), cmd.ls()));
+    dispatch({ type: 'NAVIGATE_ROOT' });
   };
 
   // Filter and sort contents (memoized)
@@ -126,8 +123,8 @@ export function FileExplorer({ path }: FileExplorerProps) {
       )}>
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl" />
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-decoration-primary rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-decoration-secondary rounded-full blur-3xl" />
         </div>
 
         {/* Sidebar - File Tree with toggle */}
@@ -166,7 +163,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
         <div className={cn(
           'relative z-10 flex items-center gap-2',
           'px-3 py-2',
-          isMobile ? 'mt-1' : 'md:gap-3 md:px-4 md:py-3 md:mr-4 md:ml-0 mt-2 md:mt-4 mx-2'
+          isMobile ? 'mt-1' : 'gap-3 px-4 py-3 mr-4 ml-0 mt-4 lg:gap-4 lg:px-6'
         )}>
           {/* Sidebar toggle button */}
           <button
@@ -270,7 +267,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
         </div>
 
         {/* Grid View (Desktop) / List View (Mobile) */}
-        <div className="relative z-10 flex-1 overflow-y-auto p-2 md:p-4">
+        <div className="relative z-10 flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 lg:p-6">
           {visibleContents.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
               <Folder className="w-20 h-20 mb-4 opacity-20" />
@@ -299,7 +296,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                       'w-full text-left',
                       'transition-all duration-200 ease-out',
                       'hover:bg-accent/50 active:bg-accent/70',
-                      'focus:outline-none focus:ring-2 focus:ring-purple-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-focus-ring'
                     )}
                   >
                     {/* Icon */}
@@ -309,7 +306,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                           className={cn(
                             'w-10 h-10 rounded-lg bg-linear-to-br',
                             'flex items-center justify-center',
-                            'shadow-md shadow-black/10',
+                            'shadow-md shadow-shadow',
                             gradientColor
                           )}
                         >
@@ -325,7 +322,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                           className={cn(
                             'w-10 h-10 rounded-lg bg-linear-to-br',
                             'flex items-center justify-center relative',
-                            'shadow-md shadow-black/10',
+                            'shadow-md shadow-shadow',
                             gradientColor
                           )}
                         >
@@ -373,7 +370,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                       'w-24',
                       'transition-all duration-200 ease-out',
                       'hover:bg-accent/50',
-                      'focus:outline-none focus:ring-2 focus:ring-purple-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-focus-ring'
                     )}
                   >
                     {/* Icon */}
@@ -383,7 +380,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                           className={cn(
                             'w-16 h-14 rounded-lg bg-linear-to-br',
                             'flex items-center justify-center',
-                            'shadow-lg shadow-black/20',
+                            'shadow-lg shadow-shadow-strong',
                             'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
                             'group-hover:rotate-[-2deg]',
                             gradientColor
@@ -401,7 +398,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                           className={cn(
                             'w-16 h-20 rounded-lg bg-linear-to-br',
                             'flex flex-col items-center justify-center relative',
-                            'shadow-lg shadow-black/20',
+                            'shadow-lg shadow-shadow-strong',
                             'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
                             'group-hover:rotate-[2deg]',
                             gradientColor
@@ -436,7 +433,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
         </div>
 
         {/* Status Bar */}
-        <div className="relative z-10 mx-2 md:mr-4 md:ml-0 mb-2 md:mb-4 px-3 md:px-4 py-1.5 md:py-2 text-xs text-muted-foreground">
+        <div className="relative z-10 mx-2 sm:mr-4 sm:ml-0 mb-2 sm:mb-4 px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs text-muted-foreground">
           {visibleContents.length} {visibleContents.length === 1 ? 'item' : 'items'}
         </div>
       </div>

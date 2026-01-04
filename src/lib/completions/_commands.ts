@@ -6,7 +6,7 @@
  */
 
 import type { Completer, CompletionContext, CompletionResult } from './types';
-import { getCommandNames } from '@/commands';
+import { getCommandNames } from '@/lib/commands';
 
 export const _commands: Completer = (ctx: CompletionContext): CompletionResult | null => {
   // 첫 번째 단어일 때만 동작

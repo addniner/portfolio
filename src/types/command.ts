@@ -1,5 +1,4 @@
-import type { ViewerState } from './terminal';
-import type { VimModeState } from '@/context/TerminalContext';
+import type { ViewerState, VimModeState } from './terminal';
 
 export interface ParsedCommand {
   command: string;

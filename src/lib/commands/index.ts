@@ -1,4 +1,5 @@
 import type { CommandDefinition, ParsedCommand, CommandContext, CommandResult } from '@/types';
+export { cmd } from './builder';
 import { helpCommand } from './help';
 import { lsCommand } from './ls';
 import { catCommand } from './cat';

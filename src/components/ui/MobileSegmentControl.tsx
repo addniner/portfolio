@@ -46,7 +46,7 @@ export function MobileSegmentControl() {
         'rounded-2xl',
         'bg-dock-bg border border-dock-border',
         'backdrop-blur-xl',
-        'shadow-lg shadow-black/10 dark:shadow-black/30'
+        'shadow-lg shadow-shadow'
       )}
     >
       {/* Segment Control */}

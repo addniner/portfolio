@@ -1,26 +1,24 @@
-import { createContext, useContext, useCallback, useRef, useState, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useRef, useState, type ReactNode } from 'react';
 
-export interface VimModeState {
-  filePath: string;
-  content: string;
-}
+/**
+ * TerminalContext - UI 전용 컨텍스트
+ *
+ * Shell 클래스가 모든 비즈니스 로직과 상태를 관리하고,
+ * 이 컨텍스트는 순수하게 UI 표시/숨김 상태만 관리합니다.
+ *
+ * - isTerminalVisible: 터미널 패널 표시 여부
+ * - isViewerVisible: 뷰어 패널 표시 여부
+ * - executeCommand: 외부에서 터미널 명령어 실행 (ShellController에 위임)
+ */
 
-export interface TerminalState {
-  cwd: string;  // Current working directory
-  currentProject: string | null;
-  viewerPath: string;  // Path to display in viewer (FSNode.type determines rendering)
-  vimMode: VimModeState | null;
+interface UIState {
   isTerminalVisible: boolean;
   isViewerVisible: boolean;
 }
 
 interface TerminalContextValue {
-  state: TerminalState;
+  state: UIState;
   executeCommand: (input: string, options?: { silent?: boolean }) => void;
-  setViewerPath: (path: string) => void;
-  setCurrentProject: (project: string | null) => void;
-  setCwd: (cwd: string) => void;
-  setVimMode: (vimMode: VimModeState | null) => void;
   setTerminalVisible: (visible: boolean) => void;
   setViewerVisible: (visible: boolean) => void;
   toggleTerminal: () => void;
@@ -31,11 +29,7 @@ interface TerminalContextValue {
 const TerminalContext = createContext<TerminalContextValue | null>(null);
 
 export function TerminalProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<TerminalState>({
-    cwd: '/home/guest',
-    currentProject: null,
-    viewerPath: '/home/guest',
-    vimMode: null,
+  const [state, setState] = useState<UIState>({
     isTerminalVisible: true,
     isViewerVisible: true,
   });
@@ -50,22 +44,6 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     if (executeCommandRef.current) {
       executeCommandRef.current(input, options);
     }
-  }, []);
-
-  const setViewerPath = useCallback((viewerPath: string) => {
-    setState((prev) => ({ ...prev, viewerPath }));
-  }, []);
-
-  const setCurrentProject = useCallback((project: string | null) => {
-    setState((prev) => ({ ...prev, currentProject: project }));
-  }, []);
-
-  const setCwd = useCallback((cwd: string) => {
-    setState((prev) => ({ ...prev, cwd }));
-  }, []);
-
-  const setVimMode = useCallback((vimMode: VimModeState | null) => {
-    setState((prev) => ({ ...prev, vimMode }));
   }, []);
 
   const setTerminalVisible = useCallback((visible: boolean) => {
@@ -88,10 +66,6 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     <TerminalContext.Provider value={{
       state,
       executeCommand,
-      setViewerPath,
-      setCurrentProject,
-      setCwd,
-      setVimMode,
       setTerminalVisible,
       setViewerVisible,
       toggleTerminal,
@@ -109,11 +83,4 @@ export function useTerminalContext() {
     throw new Error('useTerminalContext must be used within a TerminalProvider');
   }
   return context;
-}
-
-// Selector hook for optimized state access
-// Usage: const viewerState = useTerminalSelector(s => s.viewerState);
-export function useTerminalSelector<T>(selector: (state: TerminalState) => T): T {
-  const { state } = useTerminalContext();
-  return useMemo(() => selector(state), [state, selector]);
 }

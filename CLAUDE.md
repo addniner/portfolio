@@ -36,7 +36,6 @@ pnpm fetch-data   # GitHub 데이터 수동 fetch
 ## 테스트
 
 - 브라우저 테스트가 필요한 경우 Playwright MCP를 사용해 `http://localhost:5173`에서 테스트하세요.
-- `pnpm test` 로 e2e 테스트
 
 ## 참고 문서
 
