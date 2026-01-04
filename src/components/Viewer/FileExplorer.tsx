@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTerminalContext } from '@/context/TerminalContext';
 import {
   getFilesystem,
@@ -13,11 +13,13 @@ import {
   ChevronRight,
   HardDrive,
   ExternalLink,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cmd } from '@/lib/commands';
-import { motion } from 'motion/react';
-import { useIsMobile } from '@/hooks/useMediaQuery';
+import { motion, AnimatePresence } from 'motion/react';
+import { useIsMobileWithInit } from '@/hooks/useMediaQuery';
 import { FOLDER_COLORS, FILE_COLORS } from '@/config/colors';
 import { FileTree } from './FileTree';
 
@@ -27,7 +29,18 @@ interface FileExplorerProps {
 
 export function FileExplorer({ path }: FileExplorerProps) {
   const { executeCommand, toggleViewer } = useTerminalContext();
-  const isMobile = useIsMobile();
+  const { isMobile, initialized } = useIsMobileWithInit();
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean | null>(null);
+
+  // 초기화 완료 후 사이드바 상태 설정 (한 번만)
+  useEffect(() => {
+    if (initialized && isSidebarOpen === null) {
+      setIsSidebarOpen(!isMobile);
+    }
+  }, [initialized, isMobile, isSidebarOpen]);
+
+  // 실제 사이드바 표시 여부 (초기화 전에는 false)
+  const showSidebar = isSidebarOpen === true;
   const fs = getFilesystem();
   const currentNode = resolvePath(path, fs);
   const contents = listDirectory(path, fs);
@@ -78,31 +91,33 @@ export function FileExplorer({ path }: FileExplorerProps) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* macOS-style Window Header */}
-      <div className={cn(
-        'flex items-center gap-3 px-4 py-3 shrink-0',
-        'bg-muted/50 border-b border-border/50'
-      )}>
-        {/* Traffic lights */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleViewer}
-            className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-110 transition-all"
-            aria-label="Close Finder"
-            title="Close"
-          />
-          <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-          <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+      {/* macOS-style Window Header - 모바일에서는 숨김 */}
+      {!isMobile && (
+        <div className={cn(
+          'flex items-center gap-3 px-4 py-3 shrink-0',
+          'bg-muted/50 border-b border-border/50'
+        )}>
+          {/* Traffic lights */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleViewer}
+              className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-110 transition-all"
+              aria-label="Close Finder"
+              title="Close"
+            />
+            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+          </div>
+          {/* Title */}
+          <div className="flex-1 flex items-center justify-center">
+            <span className="text-sm font-medium text-muted-foreground">
+              {pathParts.length > 0 ? pathParts[pathParts.length - 1] : 'Finder'}
+            </span>
+          </div>
+          {/* Spacer for symmetry */}
+          <div className="w-14" />
         </div>
-        {/* Title */}
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-sm font-medium text-muted-foreground">
-            {pathParts.length > 0 ? pathParts[pathParts.length - 1] : 'Finder'}
-          </span>
-        </div>
-        {/* Spacer for symmetry */}
-        <div className="w-14" />
-      </div>
+      )}
 
       {/* Content area */}
       <div className={cn(
@@ -115,17 +130,65 @@ export function FileExplorer({ path }: FileExplorerProps) {
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl" />
         </div>
 
-        {/* Sidebar - File Tree (hidden on mobile) */}
-        {!isMobile && (
-          <div className="relative z-10 w-56 shrink-0 overflow-hidden">
-            <FileTree currentPath={path} />
-          </div>
-        )}
+        {/* Sidebar - File Tree with toggle */}
+        <AnimatePresence initial={false}>
+          {showSidebar && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: isMobile ? '100%' : 224, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className={cn(
+                'relative z-20 shrink-0 overflow-hidden',
+                isMobile && 'absolute inset-0 bg-background/95 backdrop-blur-sm'
+              )}
+            >
+              <div className={cn(isMobile ? 'w-full' : 'w-56')}>
+                <FileTree currentPath={path} />
+              </div>
+              {/* Mobile close button */}
+              {isMobile && (
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="absolute top-3 right-3 p-2 rounded-lg bg-secondary hover:bg-accent transition-colors"
+                  aria-label="Close sidebar"
+                >
+                  <PanelLeftClose className="w-4 h-4" />
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
-        <div className="relative z-10 flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 mx-2 md:mr-4 md:ml-0 mt-2 md:mt-4">
+        <div className={cn(
+          'relative z-10 flex items-center gap-2',
+          'px-3 py-2',
+          isMobile ? 'mt-1' : 'md:gap-3 md:px-4 md:py-3 md:mr-4 md:ml-0 mt-2 md:mt-4 mx-2'
+        )}>
+          {/* Sidebar toggle button */}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            aria-label={showSidebar ? 'Hide sidebar' : 'Show sidebar'}
+            className={cn(
+              'p-2 rounded-lg transition-all duration-200',
+              'text-muted-foreground hover:text-foreground hover:bg-accent',
+              'active:bg-accent/70',
+              showSidebar && !isMobile && 'text-foreground bg-accent'
+            )}
+          >
+            {showSidebar ? (
+              <PanelLeftClose className="w-5 h-5" />
+            ) : (
+              <PanelLeft className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Divider - 데스크톱만 */}
+          {!isMobile && <div className="w-px h-5 bg-border" />}
+
           {/* Navigation buttons */}
           <div className="flex items-center gap-1">
             <button
@@ -133,60 +196,163 @@ export function FileExplorer({ path }: FileExplorerProps) {
               disabled={path === '/'}
               aria-label="Go back to parent directory"
               className={cn(
-                'p-1.5 rounded-lg transition-all duration-200',
+                'p-2 rounded-lg transition-all duration-200',
+                'active:bg-accent/70',
                 path === '/'
                   ? 'text-muted-foreground/50 cursor-not-allowed'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
               )}
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
-            <button
-              className="p-1.5 rounded-lg text-muted-foreground/50 cursor-not-allowed"
-              disabled
-              aria-label="Go forward (disabled)"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {/* Forward button - 데스크톱만 */}
+            {!isMobile && (
+              <button
+                className="p-2 rounded-lg text-muted-foreground/50 cursor-not-allowed"
+                disabled
+                aria-label="Go forward (disabled)"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {/* Breadcrumb */}
-          <div className="flex-1 flex items-center gap-1 overflow-x-auto">
-            <button
-              onClick={handleRootClick}
-              className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-0.5 hover:bg-accent rounded"
-            >
-              <HardDrive className="w-4 h-4" />
-            </button>
-            {pathParts.map((part, index) => (
-              <div key={index} className="flex items-center gap-1 shrink-0">
-                <ChevronRight className="w-3 h-3 text-muted-foreground/60" />
+          <div className="flex-1 flex items-center gap-1 min-w-0">
+            {isMobile ? (
+              /* 모바일: 현재 폴더명만 표시 */
+              <div className="flex items-center gap-1 min-w-0">
                 <button
-                  onClick={() => handleBreadcrumbClick(index)}
-                  className={cn(
-                    'px-2 py-0.5 rounded transition-all duration-200 text-xs whitespace-nowrap',
-                    index === pathParts.length - 1
-                      ? 'text-foreground font-semibold bg-accent'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  )}
+                  onClick={handleRootClick}
+                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-1 hover:bg-accent rounded active:bg-accent/70"
                 >
-                  {part}
+                  <HardDrive className="w-5 h-5" />
                 </button>
+                {pathParts.length > 0 && (
+                  <>
+                    <ChevronRight className="w-3 h-3 text-muted-foreground/60 shrink-0" />
+                    <span className="text-sm font-semibold text-foreground truncate">
+                      {pathParts[pathParts.length - 1]}
+                    </span>
+                  </>
+                )}
               </div>
-            ))}
+            ) : (
+              /* 데스크톱: 전체 경로 표시 */
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                <button
+                  onClick={handleRootClick}
+                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0 p-1 hover:bg-accent rounded active:bg-accent/70"
+                >
+                  <HardDrive className="w-4 h-4" />
+                </button>
+                {pathParts.map((part, index) => (
+                  <div key={index} className="flex items-center gap-1 shrink-0">
+                    <ChevronRight className="w-3 h-3 text-muted-foreground/60" />
+                    <button
+                      onClick={() => handleBreadcrumbClick(index)}
+                      className={cn(
+                        'px-2 py-1 rounded transition-all duration-200 whitespace-nowrap text-xs',
+                        'active:bg-accent/70',
+                        index === pathParts.length - 1
+                          ? 'text-foreground font-semibold bg-accent'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      )}
+                    >
+                      {part}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
 
-        {/* Grid View */}
+        {/* Grid View (Desktop) / List View (Mobile) */}
         <div className="relative z-10 flex-1 overflow-y-auto p-2 md:p-4">
           {visibleContents.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
               <Folder className="w-20 h-20 mb-4 opacity-20" />
               <p className="text-base">This folder is empty</p>
             </div>
+          ) : isMobile ? (
+            /* Mobile: List View */
+            <div className="flex flex-col gap-1">
+              {visibleContents.map((node, index) => {
+                const isFolder = node.type === 'directory' || node.type === 'symlink';
+                const isSymlink = node.type === 'symlink';
+                const ext = node.name.split('.').pop() || '';
+                const gradientColor = isFolder
+                  ? FOLDER_COLORS[node.name] || 'from-blue-400 to-indigo-600'
+                  : FILE_COLORS[ext] || 'from-gray-500 to-gray-700';
+
+                return (
+                  <motion.button
+                    key={node.name}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.03, duration: 0.2 }}
+                    onClick={() => handleItemClick(node)}
+                    className={cn(
+                      'group flex items-center gap-3 p-3 rounded-xl',
+                      'w-full text-left',
+                      'transition-all duration-200 ease-out',
+                      'hover:bg-accent/50 active:bg-accent/70',
+                      'focus:outline-none focus:ring-2 focus:ring-purple-500/50'
+                    )}
+                  >
+                    {/* Icon */}
+                    <div className="relative shrink-0">
+                      {isFolder ? (
+                        <div
+                          className={cn(
+                            'w-10 h-10 rounded-lg bg-linear-to-br',
+                            'flex items-center justify-center',
+                            'shadow-md shadow-black/10',
+                            gradientColor
+                          )}
+                        >
+                          <Folder className="w-5 h-5 text-white/90" />
+                          {isSymlink && (
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-secondary rounded-full flex items-center justify-center border border-border">
+                              <ExternalLink className="w-2 h-2 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            'w-10 h-10 rounded-lg bg-linear-to-br',
+                            'flex items-center justify-center relative',
+                            'shadow-md shadow-black/10',
+                            gradientColor
+                          )}
+                        >
+                          <FileText className="w-5 h-5 text-white/90" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-foreground truncate block">
+                        {node.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {isFolder ? 'Folder' : ext.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Chevron */}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                  </motion.button>
+                );
+              })}
+            </div>
           ) : (
-            <div className="flex flex-wrap content-start gap-2 md:gap-3">
+            /* Desktop: Grid View */
+            <div className="flex flex-wrap content-start gap-3">
               {visibleContents.map((node, index) => {
                 const isFolder = node.type === 'directory' || node.type === 'symlink';
                 const isSymlink = node.type === 'symlink';
@@ -204,7 +370,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                     onClick={() => handleItemClick(node)}
                     className={cn(
                       'group flex flex-col items-center gap-2 p-2 rounded-xl',
-                      'w-20 md:w-24',
+                      'w-24',
                       'transition-all duration-200 ease-out',
                       'hover:bg-accent/50',
                       'focus:outline-none focus:ring-2 focus:ring-purple-500/50'
@@ -215,7 +381,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                       {isFolder ? (
                         <div
                           className={cn(
-                            'w-12 h-10 md:w-16 md:h-14 rounded-lg bg-linear-to-br',
+                            'w-16 h-14 rounded-lg bg-linear-to-br',
                             'flex items-center justify-center',
                             'shadow-lg shadow-black/20',
                             'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
@@ -223,17 +389,17 @@ export function FileExplorer({ path }: FileExplorerProps) {
                             gradientColor
                           )}
                         >
-                          <Folder className="w-6 h-6 md:w-8 md:h-8 text-white/90 drop-shadow-md" />
+                          <Folder className="w-8 h-8 text-white/90 drop-shadow-md" />
                           {isSymlink && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-secondary backdrop-blur-sm rounded-full flex items-center justify-center border border-border shadow-lg">
-                              <ExternalLink className="w-2 h-2 md:w-3 md:h-3 text-muted-foreground" />
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-secondary backdrop-blur-sm rounded-full flex items-center justify-center border border-border shadow-lg">
+                              <ExternalLink className="w-3 h-3 text-muted-foreground" />
                             </div>
                           )}
                         </div>
                       ) : (
                         <div
                           className={cn(
-                            'w-12 h-16 md:w-16 md:h-20 rounded-lg bg-linear-to-br',
+                            'w-16 h-20 rounded-lg bg-linear-to-br',
                             'flex flex-col items-center justify-center relative',
                             'shadow-lg shadow-black/20',
                             'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
@@ -242,10 +408,10 @@ export function FileExplorer({ path }: FileExplorerProps) {
                           )}
                         >
                           {/* Folded corner */}
-                          <div className="absolute top-0 right-0 w-3 h-3 md:w-4 md:h-4 bg-white/20 rounded-bl-md" />
-                          <FileText className="w-5 h-5 md:w-7 md:h-7 text-white/90 drop-shadow-md" />
+                          <div className="absolute top-0 right-0 w-4 h-4 bg-white/20 rounded-bl-md" />
+                          <FileText className="w-7 h-7 text-white/90 drop-shadow-md" />
                           {/* File extension badge */}
-                          <span className="mt-1 px-1 md:px-1.5 py-0.5 bg-black/30 backdrop-blur-sm rounded text-[8px] md:text-[9px] text-white/90 uppercase font-semibold tracking-wide">
+                          <span className="mt-1 px-1.5 py-0.5 bg-black/30 backdrop-blur-sm rounded text-[9px] text-white/90 uppercase font-semibold tracking-wide">
                             {ext}
                           </span>
                         </div>
@@ -255,7 +421,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                     {/* Label */}
                     <span
                       className={cn(
-                        'text-[10px] md:text-xs font-medium text-center leading-snug max-w-full px-1',
+                        'text-xs font-medium text-center leading-snug max-w-full px-1',
                         'line-clamp-2 break-all',
                         'text-muted-foreground group-hover:text-foreground transition-colors duration-200'
                       )}

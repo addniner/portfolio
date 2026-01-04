@@ -5,10 +5,11 @@ import {
 } from '@/data/filesystem';
 import { getFileContent } from '@/lib/fileContent';
 import { MarkdownRenderer } from '@/components/Markdown/MarkdownRenderer';
-import { FileText, FileCode, X, Minus, Maximize2 } from 'lucide-react';
+import { FileText, FileCode, X, Minus, Maximize2, ChevronLeft } from 'lucide-react';
 import { useTerminalContext } from '@/context/TerminalContext';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 interface VimViewerProps {
   path: string;
@@ -25,6 +26,7 @@ function getFileIcon(filename: string) {
 
 export function VimViewer({ path }: VimViewerProps) {
   const { setVimMode, setViewerPath, state } = useTerminalContext();
+  const isMobile = useIsMobile();
   const fs = getFilesystem();
   const node = resolvePath(path, fs);
   const filename = getBasename(path);
@@ -41,6 +43,61 @@ export function VimViewer({ path }: VimViewerProps) {
   const content = getFileContent(node);
   const isMarkdown = filename.endsWith('.md');
 
+  // 모바일: 전체 화면
+  if (isMobile) {
+    return (
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="vim-viewer-title"
+        initial={{ opacity: 0, x: '100%' }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: '100%' }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="absolute inset-0 z-50 flex flex-col bg-background"
+      >
+        {/* Mobile header */}
+        <div className="flex items-center gap-3 px-3 py-3 border-b border-border bg-muted/50">
+          <button
+            onClick={handleClose}
+            className="p-2 -ml-1 rounded-lg hover:bg-accent active:bg-accent/70 transition-colors"
+            aria-label="Go back"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            {getFileIcon(filename)}
+            <span id="vim-viewer-title" className="text-sm font-medium text-foreground truncate">
+              {filename}
+            </span>
+          </div>
+        </div>
+
+        {/* Content area - full height */}
+        <div className="flex-1 overflow-y-auto">
+          {isMarkdown ? (
+            <div className="p-4">
+              <MarkdownRenderer content={content || ''} />
+            </div>
+          ) : (
+            <pre className="p-4 text-sm text-foreground whitespace-pre-wrap leading-6 font-mono">
+              {content || '(empty file)'}
+            </pre>
+          )}
+        </div>
+
+        {/* Mobile footer */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/50 text-xs text-muted-foreground">
+          <span className="px-2 py-0.5 bg-secondary rounded text-secondary-foreground">
+            {isMarkdown ? 'Markdown' : filename.split('.').pop()?.toUpperCase()}
+          </span>
+          <span>{content?.split('\n').length || 0} lines</span>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // 데스크톱: 모달 스타일
   return (
     <motion.div
       role="dialog"

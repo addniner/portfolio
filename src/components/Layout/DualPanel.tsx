@@ -18,17 +18,17 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
   // Count visible panels (for desktop dual view)
   const visibleCount = (isViewerVisible ? 1 : 0) + (isTerminalVisible ? 1 : 0);
 
-  // Mobile: show one panel at a time with segment control switching
+  // Mobile: show one panel at a time with segment control switching (full screen)
   if (isMobile) {
     return (
       <div className="h-screen w-screen overflow-hidden bg-depth relative">
-        {/* Single panel container */}
-        <div className="h-full w-full p-3 pb-20">
-          {/* Viewer Window (shown when active) */}
+        {/* Full screen panel container - no padding, just bottom space for controls */}
+        <div className="h-full w-full pb-16">
+          {/* Viewer Window (shown when active) - full screen */}
           <div
             className={cn(
-              'h-full w-full rounded-2xl overflow-hidden',
-              'window-glass',
+              'h-full w-full overflow-hidden',
+              'bg-background',
               'transition-opacity duration-200',
               isViewerVisible ? 'opacity-100' : 'hidden'
             )}
@@ -36,13 +36,11 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
             {viewer}
           </div>
 
-          {/* Terminal Window (shown when active) */}
+          {/* Terminal Window (shown when active) - full screen */}
           <div
             className={cn(
-              'h-full w-full rounded-2xl overflow-hidden',
-              'bg-dracula-bg/95 border border-window-border',
-              'shadow-[0_8px_32px_var(--window-shadow),0_4px_16px_var(--window-shadow)]',
-              'backdrop-blur-xl',
+              'h-full w-full overflow-hidden',
+              'bg-dracula-bg',
               'transition-opacity duration-200',
               isTerminalVisible && !isViewerVisible ? 'opacity-100' : 'hidden'
             )}
