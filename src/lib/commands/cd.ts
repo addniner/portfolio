@@ -15,7 +15,7 @@ export const cdCommand: CommandDefinition = {
         type: 'silent',
         viewerState: homePath,
         newCwd: homePath,
-        urlPath: '/',
+        urlPath: homePath,
       };
     }
 
@@ -41,24 +41,11 @@ export const cdCommand: CommandDefinition = {
     // Use the resolved actual path (after following symlinks)
     const actualPath = resolved.actualPath;
 
-    // Generate URL path based on filesystem location
-    let urlPath = '/';
-    if (actualPath.startsWith('/home/guest/projects/')) {
-      const projectName = actualPath.replace('/home/guest/projects/', '').split('/')[0];
-      if (projectName) {
-        urlPath = `/projects/${projectName}`;
-      } else {
-        urlPath = '/projects';
-      }
-    } else if (actualPath === '/home/guest/projects') {
-      urlPath = '/projects';
-    }
-
     return {
       type: 'silent',
       viewerState: actualPath,
       newCwd: actualPath,
-      urlPath,
+      urlPath: actualPath,
     };
   },
 };

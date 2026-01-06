@@ -1,12 +1,127 @@
 import type { Terminal } from '@xterm/xterm';
+import { highlight, type Theme } from 'cli-highlight';
 import { getBasename } from '@/lib/filesystem';
+
+// Helper to create ANSI color formatter
+const ansi = (code: string) => (text: string) => `${code}${text}\x1b[0m`;
+
+// Dracula theme for cli-highlight
+const draculaTheme: Theme = {
+  keyword: ansi('\x1b[38;2;255;121;198m'),    // #ff79c6 - pink
+  built_in: ansi('\x1b[38;2;139;233;253m'),   // #8be9fd - cyan
+  type: ansi('\x1b[38;2;139;233;253m'),       // #8be9fd - cyan
+  literal: ansi('\x1b[38;2;189;147;249m'),    // #bd93f9 - purple
+  number: ansi('\x1b[38;2;189;147;249m'),     // #bd93f9 - purple
+  regexp: ansi('\x1b[38;2;255;85;85m'),       // #ff5555 - red
+  string: ansi('\x1b[38;2;241;250;140m'),     // #f1fa8c - yellow
+  subst: ansi('\x1b[38;2;248;248;242m'),      // #f8f8f2 - foreground
+  symbol: ansi('\x1b[38;2;255;184;108m'),     // #ffb86c - orange
+  class: ansi('\x1b[38;2;139;233;253m'),      // #8be9fd - cyan
+  function: ansi('\x1b[38;2;80;250;123m'),    // #50fa7b - green
+  title: ansi('\x1b[38;2;80;250;123m'),       // #50fa7b - green
+  params: ansi('\x1b[38;2;255;184;108m'),     // #ffb86c - orange
+  comment: ansi('\x1b[38;2;98;114;164m'),     // #6272a4 - comment
+  doctag: ansi('\x1b[38;2;139;233;253m'),     // #8be9fd - cyan
+  meta: ansi('\x1b[38;2;255;121;198m'),       // #ff79c6 - pink
+  'meta-keyword': ansi('\x1b[38;2;255;121;198m'),
+  'meta-string': ansi('\x1b[38;2;241;250;140m'),
+  section: ansi('\x1b[38;2;189;147;249m\x1b[1m'), // #bd93f9 bold - purple (headings)
+  tag: ansi('\x1b[38;2;255;121;198m'),        // #ff79c6 - pink
+  name: ansi('\x1b[38;2;139;233;253m'),       // #8be9fd - cyan
+  'builtin-name': ansi('\x1b[38;2;139;233;253m'),
+  attr: ansi('\x1b[38;2;80;250;123m'),        // #50fa7b - green
+  attribute: ansi('\x1b[38;2;80;250;123m'),   // #50fa7b - green
+  variable: ansi('\x1b[38;2;248;248;242m'),   // #f8f8f2 - foreground
+  bullet: ansi('\x1b[38;2;139;233;253m'),     // #8be9fd - cyan (list markers)
+  code: ansi('\x1b[38;2;80;250;123m'),        // #50fa7b - green (inline code)
+  emphasis: ansi('\x1b[3m\x1b[38;2;255;121;198m'), // italic pink
+  strong: ansi('\x1b[1m\x1b[38;2;255;184;108m'),  // bold orange
+  formula: ansi('\x1b[38;2;139;233;253m'),    // #8be9fd - cyan
+  link: ansi('\x1b[38;2;139;233;253m'),       // #8be9fd - cyan
+  quote: ansi('\x1b[38;2;241;250;140m'),      // #f1fa8c - yellow (blockquote)
+  'selector-tag': ansi('\x1b[38;2;255;121;198m'),
+  'selector-id': ansi('\x1b[38;2;80;250;123m'),
+  'selector-class': ansi('\x1b[38;2;80;250;123m'),
+  'selector-attr': ansi('\x1b[38;2;80;250;123m'),
+  'selector-pseudo': ansi('\x1b[38;2;80;250;123m'),
+  'template-tag': ansi('\x1b[38;2;255;121;198m'),
+  'template-variable': ansi('\x1b[38;2;80;250;123m'),
+  addition: ansi('\x1b[38;2;80;250;123m'),    // #50fa7b - green
+  deletion: ansi('\x1b[38;2;255;85;85m'),     // #ff5555 - red
+  default: ansi('\x1b[38;2;248;248;242m'),    // #f8f8f2 - foreground
+};
+
+// Get language from file extension
+function getLanguageFromFilename(filename: string): string | undefined {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const langMap: Record<string, string> = {
+    md: 'markdown',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    json: 'json',
+    css: 'css',
+    html: 'html',
+    sh: 'bash',
+    bash: 'bash',
+    yml: 'yaml',
+    yaml: 'yaml',
+    py: 'python',
+    rb: 'ruby',
+    go: 'go',
+    rs: 'rust',
+    sql: 'sql',
+    xml: 'xml',
+  };
+  return ext ? langMap[ext] : undefined;
+}
+
+// Post-process markdown to better highlight code fences
+function postProcessMarkdown(lines: string[]): string[] {
+  const codeFenceColor = '\x1b[38;2;139;233;253m'; // cyan
+  const reset = '\x1b[0m';
+
+  return lines.map(line => {
+    // Check if line starts with ``` (code fence) - handle both raw and already processed
+    const trimmed = line.replace(/\x1b\[[0-9;]*m/g, '').trim();
+    if (trimmed.startsWith('```')) {
+      // Replace the entire line with colored version
+      return `${codeFenceColor}${trimmed}${reset}`;
+    }
+    return line;
+  });
+}
+
+// Highlight content using cli-highlight
+function highlightContent(content: string, language?: string): string[] {
+  try {
+    const highlighted = highlight(content, {
+      language,
+      theme: draculaTheme,
+    });
+    let lines = highlighted.split('\n');
+
+    // Post-process markdown files to better highlight code fences
+    if (language === 'markdown') {
+      lines = postProcessMarkdown(lines);
+    }
+
+    return lines;
+  } catch {
+    // Fallback to plain text if highlighting fails
+    return content.split('\n');
+  }
+}
 
 // Vim mode state
 export interface VimState {
   content: string;
   lines: string[];
+  highlightedLines: string[];
   filePath: string;
   filename: string;
+  language?: string;
   scrollOffset: number;
   cursorLine: number;
   cursorCol: number;
@@ -42,11 +157,17 @@ export class VimController {
 
   enter(filePath: string, content: string): void {
     const lines = content.split('\n');
+    const filename = getBasename(filePath);
+    const language = getLanguageFromFilename(filename);
+    const highlightedLines = highlightContent(content, language);
+
     this.state = {
       content,
       lines,
+      highlightedLines,
       filePath,
-      filename: getBasename(filePath),
+      filename,
+      language,
       scrollOffset: 0,
       cursorLine: 0,
       cursorCol: 0,
@@ -90,7 +211,7 @@ export class VimController {
 
     const code = data.charCodeAt(0);
     const rows = this.term.rows;
-    const contentRows = rows - 2;
+    const contentRows = rows - 3;
 
     // Command mode
     if (this.state.commandMode) {
@@ -106,7 +227,7 @@ export class VimController {
     if (!this.state) return;
 
     const rows = this.term.rows;
-    const contentRows = rows - 2;
+    const contentRows = rows - 3;
 
     // Adjust scroll offset if needed
     this.state.scrollOffset = Math.min(
@@ -115,6 +236,34 @@ export class VimController {
     );
 
     this.render();
+  }
+
+  // Handle mouse wheel scroll (called from XTerminal)
+  handleWheel(deltaY: number): void {
+    if (!this.state) return;
+
+    const rows = this.term.rows;
+    const contentRows = rows - 3; // Reserve 2 rows for status bar and command line
+    const scrollLines = deltaY > 0 ? 3 : -3; // Scroll 3 lines at a time
+
+    // Calculate new scroll offset (scroll the view, not cursor)
+    // Max offset allows last line to be visible at the bottom of content area
+    const maxScrollOffset = Math.max(0, this.state.lines.length - contentRows);
+    const newScrollOffset = Math.max(0, Math.min(maxScrollOffset, this.state.scrollOffset + scrollLines));
+
+    // Only re-render if scroll actually changed
+    if (newScrollOffset !== this.state.scrollOffset) {
+      this.state.scrollOffset = newScrollOffset;
+
+      // Keep cursor within visible area
+      if (this.state.cursorLine < this.state.scrollOffset) {
+        this.state.cursorLine = this.state.scrollOffset;
+      } else if (this.state.cursorLine >= this.state.scrollOffset + contentRows) {
+        this.state.cursorLine = this.state.scrollOffset + contentRows - 1;
+      }
+
+      this.render();
+    }
   }
 
   private handleCommandModeInput(data: string, code: number): void {
@@ -274,14 +423,15 @@ export class VimController {
 
     const rows = this.term.rows;
     const cols = this.term.cols;
-    const contentRows = rows - 2;
+    // Reserve 3 rows: status bar, command line, and buffer for xterm rendering
+    const contentRows = rows - 3;
 
     // Clear screen and hide cursor
     this.term.write('\x1b[?25l');
     this.term.write('\x1b[2J');
     this.term.write('\x1b[H');
 
-    // Render content lines
+    // Render content lines (rows 1 to contentRows)
     const startLine = this.state.scrollOffset;
     for (let i = 0; i < contentRows; i++) {
       const lineNum = startLine + i;
@@ -291,10 +441,11 @@ export class VimController {
         const lineNumStr = String(lineNum + 1).padStart(4, ' ');
         this.term.write(`\x1b[33m${lineNumStr}\x1b[0m `);
 
-        const line = this.state.lines[lineNum] || '';
-        const maxLineLen = cols - 6;
-        const displayLine = line.length > maxLineLen ? line.slice(0, maxLineLen - 1) + '…' : line;
-        this.term.write(displayLine);
+        // Use pre-highlighted line (already contains ANSI codes)
+        const highlightedLine = this.state.highlightedLines[lineNum] || '';
+        // For truncation, we need to be careful with ANSI codes
+        // Simple approach: just output the highlighted line and let terminal handle overflow
+        this.term.write(highlightedLine);
       } else {
         this.term.write(`\x1b[34m   ~\x1b[0m`);
       }
@@ -302,8 +453,8 @@ export class VimController {
       this.term.write('\x1b[K');
     }
 
-    // Status line
-    const statusRow = rows - 1;
+    // Status line (row contentRows + 1, which is rows - 2)
+    const statusRow = contentRows + 1;
     this.term.write(`\x1b[${statusRow};1H`);
     this.term.write('\x1b[7m');
 
@@ -326,8 +477,8 @@ export class VimController {
     this.term.write(rightPart);
     this.term.write('\x1b[0m');
 
-    // Command line
-    const cmdRow = rows;
+    // Command line (row contentRows + 2, which is rows - 1)
+    const cmdRow = contentRows + 2;
     this.term.write(`\x1b[${cmdRow};1H`);
     this.term.write('\x1b[K');
 

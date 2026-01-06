@@ -31,6 +31,26 @@ import { commands as legacyCommands } from '@/lib/commands';
 let shellInstance: Shell | null = null;
 
 /**
+ * URL에서 초기 경로 파싱
+ * 파일시스템에 존재하는 경로면 그대로 사용
+ */
+function getInitialPathFromUrl(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+
+  const pathname = window.location.pathname;
+  if (pathname === '/') return undefined;
+
+  // 파일시스템에 경로가 존재하는지 확인
+  const filesystem = getFilesystemInstance();
+  const resolved = filesystem.resolvePath(pathname);
+  if (resolved && resolved.type === 'directory') {
+    return pathname;
+  }
+
+  return undefined;
+}
+
+/**
  * 싱글톤 Shell 인스턴스 조회
  */
 export function getShellInstance(): Shell {
@@ -39,7 +59,13 @@ export function getShellInstance(): Shell {
     const commands = createCommandRegistryFromLegacy(legacyCommands);
     const completions = getCompletionEngineInstance();
 
-    shellInstance = new Shell(filesystem, commands, completions);
+    // URL에서 초기 경로 가져오기
+    const initialPath = getInitialPathFromUrl();
+
+    shellInstance = new Shell(filesystem, commands, completions, initialPath ? {
+      cwd: initialPath,
+      viewPath: initialPath,
+    } : undefined);
   }
   return shellInstance;
 }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useCallback, useRef, useState, type ReactNode } from 'react';
+import { parseUrlState, useUrlState } from '@/hooks/useUrlState';
 
 /**
  * TerminalContext - UI 전용 컨텍스트
@@ -9,6 +10,10 @@ import { createContext, useContext, useCallback, useRef, useState, type ReactNod
  * - isTerminalVisible: 터미널 패널 표시 여부
  * - isViewerVisible: 뷰어 패널 표시 여부
  * - executeCommand: 외부에서 터미널 명령어 실행 (ShellController에 위임)
+ *
+ * URL 쿼리파라미터와 동기화:
+ * - ?terminal=false → 터미널 숨김
+ * - ?viewer=false → 뷰어 숨김
  */
 
 interface UIState {
@@ -28,10 +33,32 @@ interface TerminalContextValue {
 
 const TerminalContext = createContext<TerminalContextValue | null>(null);
 
+/**
+ * URL에서 초기 UI 상태 파싱
+ */
+function getInitialUIState(): UIState {
+  // SSR 환경에서는 기본값 반환
+  if (typeof window === 'undefined') {
+    return { isTerminalVisible: true, isViewerVisible: true };
+  }
+
+  const urlState = parseUrlState();
+  return {
+    isTerminalVisible: urlState.terminal !== false,
+    isViewerVisible: urlState.viewer !== false,
+  };
+}
+
 export function TerminalProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<UIState>({
-    isTerminalVisible: true,
-    isViewerVisible: true,
+  const [state, setState] = useState<UIState>(getInitialUIState);
+  const { updateUrl } = useUrlState({
+    onStateChange: (urlState) => {
+      // 브라우저 뒤로가기/앞으로가기 시 상태 복원
+      setState({
+        isTerminalVisible: urlState.terminal !== false,
+        isViewerVisible: urlState.viewer !== false,
+      });
+    },
   });
 
   const executeCommandRef = useRef<((cmd: string, options?: { silent?: boolean }) => void) | null>(null);
@@ -48,19 +75,29 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   const setTerminalVisible = useCallback((visible: boolean) => {
     setState((prev) => ({ ...prev, isTerminalVisible: visible }));
-  }, []);
+    updateUrl({ terminal: visible });
+  }, [updateUrl]);
 
   const setViewerVisible = useCallback((visible: boolean) => {
     setState((prev) => ({ ...prev, isViewerVisible: visible }));
-  }, []);
+    updateUrl({ viewer: visible });
+  }, [updateUrl]);
 
   const toggleTerminal = useCallback(() => {
-    setState((prev) => ({ ...prev, isTerminalVisible: !prev.isTerminalVisible }));
-  }, []);
+    setState((prev) => {
+      const newVisible = !prev.isTerminalVisible;
+      updateUrl({ terminal: newVisible });
+      return { ...prev, isTerminalVisible: newVisible };
+    });
+  }, [updateUrl]);
 
   const toggleViewer = useCallback(() => {
-    setState((prev) => ({ ...prev, isViewerVisible: !prev.isViewerVisible }));
-  }, []);
+    setState((prev) => {
+      const newVisible = !prev.isViewerVisible;
+      updateUrl({ viewer: newVisible });
+      return { ...prev, isViewerVisible: newVisible };
+    });
+  }, [updateUrl]);
 
   return (
     <TerminalContext.Provider value={{

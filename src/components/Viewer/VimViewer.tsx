@@ -1,6 +1,13 @@
+import { useEffect } from 'react';
 import { MarkdownRenderer } from '@/components/Markdown/MarkdownRenderer';
-import { FileText, FileCode, ChevronLeft } from 'lucide-react';
+import { FileText, FileCode } from 'lucide-react';
 import { WindowHeader } from '@/components/ui/WindowHeader';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { useShell } from '@/hooks/useShell';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -30,6 +37,17 @@ export function VimViewer({ path }: VimViewerProps) {
     shell.setViewPath(cwd);
   };
 
+  // ESC 키로 닫기
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   if (!node || node.type === 'directory') {
     return null;
   }
@@ -37,57 +55,40 @@ export function VimViewer({ path }: VimViewerProps) {
   const content = shell.getFileContent(node);
   const isMarkdown = filename.endsWith('.md');
 
-  // 모바일: 전체 화면
+  // 모바일: 바텀시트 (Drawer)
   if (isMobile) {
     return (
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="vim-viewer-title"
-        initial={{ opacity: 0, x: '100%' }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: '100%' }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="absolute inset-0 z-50 flex flex-col bg-background"
-      >
-        {/* Mobile header */}
-        <div className="flex items-center gap-3 px-3 py-3 border-b border-border bg-muted/50">
-          <button
-            onClick={handleClose}
-            className="p-2 -ml-1 rounded-lg hover:bg-accent active:bg-accent/70 transition-colors"
-            aria-label="Go back"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            {getFileIcon(filename)}
-            <span id="vim-viewer-title" className="text-sm font-medium text-foreground truncate">
-              {filename}
-            </span>
+      <Drawer open={true} onOpenChange={(open) => !open && handleClose()}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="border-b border-border pb-3">
+            <DrawerTitle className="flex items-center gap-2 justify-center">
+              {getFileIcon(filename)}
+              <span className="truncate">{filename}</span>
+            </DrawerTitle>
+          </DrawerHeader>
+
+          {/* Content area */}
+          <div className="flex-1 overflow-y-auto">
+            {isMarkdown ? (
+              <div className="p-4">
+                <MarkdownRenderer content={content || ''} />
+              </div>
+            ) : (
+              <pre className="p-4 text-sm text-foreground whitespace-pre-wrap leading-6 font-mono">
+                {content || '(empty file)'}
+              </pre>
+            )}
           </div>
-        </div>
 
-        {/* Content area - full height */}
-        <div className="flex-1 overflow-y-auto">
-          {isMarkdown ? (
-            <div className="p-4">
-              <MarkdownRenderer content={content || ''} />
-            </div>
-          ) : (
-            <pre className="p-4 text-sm text-foreground whitespace-pre-wrap leading-6 font-mono">
-              {content || '(empty file)'}
-            </pre>
-          )}
-        </div>
-
-        {/* Mobile footer */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/50 text-xs text-muted-foreground">
-          <span className="px-2 py-0.5 bg-secondary rounded text-secondary-foreground">
-            {isMarkdown ? 'Markdown' : filename.split('.').pop()?.toUpperCase()}
-          </span>
-          <span>{content?.split('\n').length || 0} lines</span>
-        </div>
-      </motion.div>
+          {/* Footer */}
+          <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/50 text-xs text-muted-foreground">
+            <span className="px-2 py-0.5 bg-secondary rounded text-secondary-foreground">
+              {isMarkdown ? 'Markdown' : filename.split('.').pop()?.toUpperCase()}
+            </span>
+            <span>{content?.split('\n').length || 0} lines</span>
+          </div>
+        </DrawerContent>
+      </Drawer>
     );
   }
 
@@ -101,7 +102,7 @@ export function VimViewer({ path }: VimViewerProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="absolute inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-8"
+      className="absolute inset-0 z-50 flex items-center justify-center p-8 sm:p-12 lg:p-16"
     >
       {/* Backdrop */}
       <motion.div
@@ -119,7 +120,7 @@ export function VimViewer({ path }: VimViewerProps) {
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         className={cn(
-          'relative w-full max-w-3xl max-h-[85vh] flex flex-col',
+          'relative w-full max-w-3xl h-[80vh] flex flex-col',
           'rounded-2xl overflow-hidden',
           'shadow-2xl shadow-shadow-strong',
           'bg-card border border-border',
@@ -181,7 +182,7 @@ export function VimViewer({ path }: VimViewerProps) {
           <div className="flex items-center gap-4">
             <span>UTF-8</span>
             <span className="text-muted-foreground">
-              Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-[10px] text-secondary-foreground">:q</kbd> to close
+              Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-[10px] text-secondary-foreground">ESC</kbd> to close
             </span>
           </div>
         </div>

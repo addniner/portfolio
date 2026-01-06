@@ -15,9 +15,11 @@
     "test:unit:watch": "vitest"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.1",
+    "cli-highlight": "^2.1.11",
     "clsx": "^2.1.1",
     "fuzzysort": "^3.1.0",
     "lucide-react": "^0.562.0",
@@ -30,7 +32,8 @@
     "remark-gfm": "^4.0.1",
     "shell-quote": "^1.8.3",
     "shiki": "^3.20.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

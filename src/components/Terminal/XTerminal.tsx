@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { useTerminalContext } from '@/context/TerminalContext';
 import { useShell } from '@/hooks/useShell';
+import { useUrlState, type UrlState } from '@/hooks/useUrlState';
 import { DRACULA_THEME } from '@/config/terminal';
 import { VimController } from '@/lib/terminal/VimController';
 import { ShellController } from '@/lib/terminal/ShellController';
@@ -18,6 +19,20 @@ export function XTerminal() {
   const { shell, editorMode } = useShell();
   const { state, registerExecuteCommand, toggleTerminal } = useTerminalContext();
 
+  // 브라우저 뒤로가기/앞으로가기 시 Shell 상태 동기화
+  const handleUrlStateChange = useCallback((urlState: UrlState) => {
+    const targetPath = urlState.path || '/home/guest';
+    const currentCwd = shell.getCwd();
+
+    // 경로가 변경된 경우에만 Shell 상태 업데이트
+    if (targetPath !== currentCwd) {
+      shell.setCwd(targetPath);
+      shell.setViewPath(targetPath);
+    }
+  }, [shell]);
+
+  const { updateUrl } = useUrlState({ onStateChange: handleUrlStateChange });
+
   // Shell ref for use in effects (avoids stale closures)
   const shellRef = useRef(shell);
   useEffect(() => {
@@ -28,6 +43,12 @@ export function XTerminal() {
   useEffect(() => {
     registerExecuteCommandRef.current = registerExecuteCommand;
   }, [registerExecuteCommand]);
+
+  // updateUrl ref for use in ShellController callback
+  const updateUrlRef = useRef(updateUrl);
+  useEffect(() => {
+    updateUrlRef.current = updateUrl;
+  }, [updateUrl]);
 
   // Handle terminal visibility changes - fit terminal when it becomes visible
   useEffect(() => {
@@ -80,9 +101,11 @@ export function XTerminal() {
       shell: shellRef.current,
       onVimEnter: (vimMode: { filePath: string; content: string }) => {
         vimControllerRef.current?.enter(vimMode.filePath, vimMode.content);
+        // URL에 vim 모드 반영
+        updateUrlRef.current({ vim: vimMode.filePath });
       },
-      onUrlChange: (urlPath: string, cmd: string, args: string[]) => {
-        window.history.pushState({ cmd, args }, '', urlPath);
+      onUrlChange: (urlPath: string) => {
+        updateUrlRef.current({ path: urlPath });
       },
     });
     shellControllerRef.current = shellController;
@@ -93,6 +116,8 @@ export function XTerminal() {
         // Shell의 editorMode를 종료하고 viewPath를 cwd로 복원
         shellRef.current.exitEditor();
         shellRef.current.setViewPath(shellRef.current.getCwd());
+        // URL에서 vim 모드 제거
+        updateUrlRef.current({ vim: undefined });
         // Write prompt to terminal after vim exit
         shellController.writePrompt();
       },
@@ -106,6 +131,14 @@ export function XTerminal() {
 
     // Write welcome message
     shellController.writeWelcome();
+
+    // URL에서 vim 파라미터 확인하여 초기 vim 모드 진입
+    const urlParams = new URLSearchParams(window.location.search);
+    const vimFile = urlParams.get('vim');
+    if (vimFile) {
+      // silent로 vim 명령어 실행 (터미널에 출력 안 함)
+      shellController.executeCommand(`vim ${vimFile}`, { silent: true });
+    }
 
     // Main input handler - routes to vim or shell
     term.onData((data) => {
@@ -122,10 +155,23 @@ export function XTerminal() {
       vimController.handleResize();
     };
 
+    // Handle mouse wheel scroll for vim mode
+    const handleWheel = (e: WheelEvent) => {
+      if (vimController.isActive()) {
+        e.preventDefault();
+        e.stopPropagation();
+        vimController.handleWheel(e.deltaY);
+      }
+    };
+
     window.addEventListener('resize', handleResize);
+    // Attach to xterm's element for wheel events
+    const xtermElement = terminalRef.current?.querySelector('.xterm');
+    xtermElement?.addEventListener('wheel', handleWheel as EventListener, { passive: false });
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      xtermElement?.removeEventListener('wheel', handleWheel as EventListener);
       term.dispose();
       xtermRef.current = null;
       vimControllerRef.current = null;

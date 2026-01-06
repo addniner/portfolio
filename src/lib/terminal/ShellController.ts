@@ -7,7 +7,7 @@ import type { Shell } from '@/lib/shell';
 export interface ShellControllerOptions {
   shell: Shell;
   onVimEnter: (vimMode: { filePath: string; content: string }) => void;
-  onUrlChange: (urlPath: string, cmd: string, args: string[]) => void;
+  onUrlChange: (urlPath: string) => void;
 }
 
 /**
@@ -317,11 +317,9 @@ export class ShellController {
       return; // Don't write prompt, we're in vim now
     }
 
-    // URL 변경
-    if (!silent && result.urlPath) {
-      // urlPath에서 command와 args 추출 (간단히 처리)
-      const parts = input.trim().split(/\s+/);
-      this.options.onUrlChange(result.urlPath, parts[0] || '', parts.slice(1));
+    // URL 변경 (silent 여부와 무관하게 항상 실행)
+    if (result.urlPath) {
+      this.options.onUrlChange(result.urlPath);
     }
 
     if (!silent) {

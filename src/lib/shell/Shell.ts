@@ -163,11 +163,18 @@ export class Shell {
   private executeChain(input: string): ExecuteResult {
     const segments = this.parseCommandChain(input);
 
-    let lastResult: ExecuteResult = {};
+    let mergedResult: ExecuteResult = {};
 
     for (const segment of segments) {
       const result = this.executeSingle(segment.command);
-      lastResult = result;
+
+      // 결과 병합: output은 마지막 것, urlPath는 마지막으로 설정된 것 유지
+      mergedResult = {
+        ...mergedResult,
+        ...result,
+        // urlPath는 새로운 값이 있을 때만 덮어쓰기
+        urlPath: result.urlPath ?? mergedResult.urlPath,
+      };
 
       // && 연산자: 에러 시 중단
       // ; 연산자: 에러와 무관하게 계속 실행
@@ -176,7 +183,7 @@ export class Shell {
       }
     }
 
-    return lastResult;
+    return mergedResult;
   }
 
   /**
@@ -398,10 +405,12 @@ export class Shell {
 
   setCwd(cwd: string): void {
     this.state.cwd = cwd;
+    this.notify();
   }
 
   setViewPath(path: string): void {
     this.state.viewPath = path;
+    this.notify();
   }
 
   setCurrentProject(project: string | null): void {
