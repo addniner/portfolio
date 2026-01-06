@@ -8,6 +8,7 @@ import { useUrlState, type UrlState } from '@/hooks/useUrlState';
 import { DRACULA_THEME } from '@/config/terminal';
 import { VimController } from '@/lib/terminal/VimController';
 import { ShellController } from '@/lib/terminal/ShellController';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 export function XTerminal() {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -203,7 +204,7 @@ export function XTerminal() {
     vimControllerRef.current?.syncFromExternal(editorMode);
   }, [editorMode]);
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   return (
     <div className="h-full flex flex-col">
