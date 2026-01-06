@@ -203,28 +203,32 @@ export function XTerminal() {
     vimControllerRef.current?.syncFromExternal(editorMode);
   }, [editorMode]);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <div className="h-full flex flex-col">
-      {/* Window Chrome - FileExplorer 스타일과 통일 */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleTerminal}
-            className="w-3 h-3 rounded-full bg-traffic-close hover:brightness-110 transition-all"
-            aria-label="Close terminal"
-            title="Close"
-          />
-          <div className="w-3 h-3 rounded-full bg-traffic-minimize" />
-          <div className="w-3 h-3 rounded-full bg-traffic-maximize" />
+      {/* Window Chrome - 모바일에서는 숨김 */}
+      {!isMobile && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTerminal}
+              className="w-3 h-3 rounded-full bg-traffic-close hover:brightness-110 transition-all"
+              aria-label="Close terminal"
+              title="Close"
+            />
+            <div className="w-3 h-3 rounded-full bg-traffic-minimize" />
+            <div className="w-3 h-3 rounded-full bg-traffic-maximize" />
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <span className="text-sm font-medium text-muted-foreground">
+              {editorMode ? `vim - ${shell.getBasename(editorMode.filePath)}` : 'terminal'}
+            </span>
+          </div>
+          {/* Spacer for symmetry */}
+          <div className="w-14" />
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-sm font-medium text-muted-foreground">
-            {editorMode ? `vim - ${shell.getBasename(editorMode.filePath)}` : 'terminal'}
-          </span>
-        </div>
-        {/* Spacer for symmetry */}
-        <div className="w-14" />
-      </div>
+      )}
 
       {/* Terminal Container - xterm과 같은 배경색으로 빈 공간 채움 */}
       <div

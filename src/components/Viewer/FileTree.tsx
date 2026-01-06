@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronRight, Folder, FileText, ExternalLink, FolderKanban, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import { ChevronRight, Folder, FileText, ExternalLink, FolderKanban, ChevronsUpDown, ChevronsDownUp, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useShell } from '@/hooks/useShell';
 import { useAction } from '@/hooks/useAction';
@@ -8,6 +8,7 @@ import { FOLDER_ICON_COLORS } from '@/config/colors';
 
 interface FileTreeProps {
   currentPath: string;
+  onClose?: () => void;
 }
 
 interface TreeNodeProps {
@@ -167,7 +168,7 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false, for
   );
 }
 
-export function FileTree({ currentPath }: FileTreeProps) {
+export function FileTree({ currentPath, onClose }: FileTreeProps) {
   const { shell } = useShell();
   const { dispatch } = useAction();
   const fs = shell.getFilesystem().getRoot();
@@ -220,6 +221,20 @@ export function FileTree({ currentPath }: FileTreeProps) {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Mobile Header with Close Button */}
+      {onClose && (
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+          <span className="text-sm font-medium text-foreground">Sidebar</span>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Favorites Section */}
       <div className="px-3 py-2 shrink-0">
         <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground tracking-wider">

@@ -98,12 +98,12 @@ export function FileExplorer({ path }: FileExplorerProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={toggleViewer}
-              className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-110 transition-all"
+              className="w-3 h-3 rounded-full bg-traffic-close hover:brightness-110 transition-all"
               aria-label="Close Finder"
               title="Close"
             />
-            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+            <div className="w-3 h-3 rounded-full bg-traffic-minimize" />
+            <div className="w-3 h-3 rounded-full bg-traffic-maximize" />
           </div>
           {/* Title */}
           <div className="flex-1 flex items-center justify-center">
@@ -141,18 +141,11 @@ export function FileExplorer({ path }: FileExplorerProps) {
               )}
             >
               <div className={cn('h-full', isMobile ? 'w-full' : 'w-56')}>
-                <FileTree currentPath={path} />
+                <FileTree
+                  currentPath={path}
+                  onClose={isMobile ? () => setIsSidebarOpen(false) : undefined}
+                />
               </div>
-              {/* Mobile close button */}
-              {isMobile && (
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="absolute top-3 right-3 p-2 rounded-lg bg-secondary hover:bg-accent transition-colors"
-                  aria-label="Close sidebar"
-                >
-                  <PanelLeftClose className="w-4 h-4" />
-                </button>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
