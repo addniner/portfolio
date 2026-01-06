@@ -58,7 +58,11 @@ export function VimViewer({ path }: VimViewerProps) {
   // 모바일: 바텀시트 (Drawer)
   if (isMobile) {
     return (
-      <Drawer open={true} onOpenChange={(open) => !open && handleClose()}>
+      <Drawer
+        open={true}
+        onOpenChange={(open) => !open && handleClose()}
+        shouldScaleBackground={false}
+      >
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader className="border-b border-border pb-3">
             <DrawerTitle className="flex items-center gap-2 justify-center">
@@ -68,7 +72,7 @@ export function VimViewer({ path }: VimViewerProps) {
           </DrawerHeader>
 
           {/* Content area */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overscroll-contain">
             {isMarkdown ? (
               <div className="p-4">
                 <MarkdownRenderer content={content || ''} />
