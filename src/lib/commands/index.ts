@@ -1,6 +1,6 @@
 import type { CommandDefinition, ParsedCommand, CommandContext, CommandResult } from '@/types';
 export { cmd } from './builder';
-import { helpCommand } from './help';
+import { helpCommand, setCommandsRegistry } from './help';
 import { lsCommand } from './ls';
 import { catCommand } from './cat';
 import { cdCommand } from './cd';
@@ -26,6 +26,9 @@ export const commands: Record<string, CommandDefinition> = {
   ':q!': quitCommand, // alias
   ':wq': quitCommand, // alias (we don't save, just close)
 };
+
+// help 명령어에서 동적으로 명령어 목록을 표시하기 위해 레지스트리 설정
+setCommandsRegistry(commands);
 
 export function getCommandNames(): string[] {
   return Object.keys(commands);

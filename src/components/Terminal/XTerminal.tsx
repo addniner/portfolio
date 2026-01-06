@@ -75,27 +75,29 @@ export function XTerminal() {
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Create VimController
-    const vimController = new VimController(term, {
-      onExit: () => {
-        // Shell의 editorMode를 종료하고 viewPath를 cwd로 복원
-        shellRef.current.exitEditor();
-        shellRef.current.setViewPath(shellRef.current.getCwd());
-      },
-    });
-    vimControllerRef.current = vimController;
-
-    // Create ShellController - Shell 인스턴스를 직접 전달
+    // Create ShellController first - Shell 인스턴스를 직접 전달
     const shellController = new ShellController(term, {
       shell: shellRef.current,
       onVimEnter: (vimMode: { filePath: string; content: string }) => {
-        vimController.enter(vimMode.filePath, vimMode.content);
+        vimControllerRef.current?.enter(vimMode.filePath, vimMode.content);
       },
       onUrlChange: (urlPath: string, cmd: string, args: string[]) => {
         window.history.pushState({ cmd, args }, '', urlPath);
       },
     });
     shellControllerRef.current = shellController;
+
+    // Create VimController
+    const vimController = new VimController(term, {
+      onExit: () => {
+        // Shell의 editorMode를 종료하고 viewPath를 cwd로 복원
+        shellRef.current.exitEditor();
+        shellRef.current.setViewPath(shellRef.current.getCwd());
+        // Write prompt to terminal after vim exit
+        shellController.writePrompt();
+      },
+    });
+    vimControllerRef.current = vimController;
 
     // Register executeCommand for external use
     registerExecuteCommandRef.current((cmd: string, options?: { silent?: boolean }) => {
@@ -157,20 +159,20 @@ export function XTerminal() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Window Chrome */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-dracula-current/30 border-b border-white/5">
-        <div className="flex gap-1.5">
+      {/* Window Chrome - FileExplorer 스타일과 통일 */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border/50">
+        <div className="flex items-center gap-2">
           <button
             onClick={toggleTerminal}
-            className="w-3 h-3 rounded-full bg-dracula-red hover:brightness-110 transition-all"
+            className="w-3 h-3 rounded-full bg-traffic-close hover:brightness-110 transition-all"
             aria-label="Close terminal"
             title="Close"
           />
-          <div className="w-3 h-3 rounded-full bg-dracula-yellow" />
-          <div className="w-3 h-3 rounded-full bg-dracula-green" />
+          <div className="w-3 h-3 rounded-full bg-traffic-minimize" />
+          <div className="w-3 h-3 rounded-full bg-traffic-maximize" />
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-dracula-comment text-xs">
+          <span className="text-sm font-medium text-muted-foreground">
             {editorMode ? `vim - ${shell.getBasename(editorMode.filePath)}` : 'terminal'}
           </span>
         </div>
@@ -178,10 +180,10 @@ export function XTerminal() {
         <div className="w-14" />
       </div>
 
-      {/* Terminal Container */}
+      {/* Terminal Container - xterm과 같은 배경색으로 빈 공간 채움 */}
       <div
         ref={terminalRef}
-        className="flex-1 px-4 py-2 bg-dracula-bg/80"
+        className="flex-1 px-4 py-2 bg-[#282a36]"
       />
     </div>
   );

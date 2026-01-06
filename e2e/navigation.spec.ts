@@ -12,22 +12,18 @@ test.describe('FileExplorer Navigation', () => {
   });
 
   test('clicking folder should navigate via cd command', async ({ page }) => {
-    // Click on hyeonmin folder in file grid (not sidebar)
-    await getFileGridButton(page, 'hyeonmin').click();
+    // Click on projects folder in file grid (not sidebar)
+    await getFileGridButton(page, 'projects').click();
 
     // Terminal should show cd command was executed
-    await expect(page.getByText('$ cd hyeonmin')).toBeVisible();
+    await expect(page.getByText('$ cd projects')).toBeVisible();
 
-    // Viewer should show contents of /home/hyeonmin
-    await expect(getFileGridButton(page, 'projects')).toBeVisible();
+    // Viewer should show contents of ~/projects
+    await expect(page.getByRole('button', { name: 'md portfolio.md' })).toBeVisible();
   });
 
   test('clicking file should open in vim', async ({ page }) => {
-    // Navigate to hyeonmin first
-    await getFileGridButton(page, 'hyeonmin').click();
-    await expect(getFileGridButton(page, 'projects')).toBeVisible();
-
-    // Click on about.md button (not the terminal output)
+    // Click on about.md button (it's in home directory)
     await page.getByRole('button', { name: 'md about.md' }).click();
 
     // Terminal title should show vim mode
@@ -38,34 +34,32 @@ test.describe('FileExplorer Navigation', () => {
   });
 
   test('breadcrumb navigation should work', async ({ page }) => {
-    // Navigate to hyeonmin/projects
-    await getFileGridButton(page, 'hyeonmin').click();
+    // Navigate to ~/projects
     await getFileGridButton(page, 'projects').click();
 
-    // Should be in /home/hyeonmin/projects (check terminal prompt)
-    await expect(page.getByText('/home/hyeonmin/projects', { exact: true })).toBeVisible();
+    // Should be in ~/projects (check terminal prompt)
+    await expect(page.getByText('~/projects', { exact: true })).toBeVisible();
 
-    // Click on hyeonmin in breadcrumb to go back
-    // Breadcrumb buttons are small (text-xs) and not in the file grid
-    await page.locator('button.text-xs, button:has(.text-xs)').filter({ hasText: 'hyeonmin' }).click();
+    // Click on guest in breadcrumb to go back to home
+    await page.locator('button.text-xs, button:has(.text-xs)').filter({ hasText: 'guest' }).click();
 
-    // Should be back in /home/hyeonmin - verify by checking projects folder is visible
+    // Should be back in ~ - verify by checking projects folder is visible
     await expect(getFileGridButton(page, 'projects')).toBeVisible();
     await expect(page.getByRole('button', { name: 'md about.md' })).toBeVisible();
   });
 
-  test('home button should navigate to ~', async ({ page }) => {
-    // Navigate away first using sidebar
-    await page.locator('button').filter({ hasText: /^hyeonmin$/ }).first().click();
-    await expect(page.getByText('/home/hyeonmin', { exact: true })).toBeVisible();
+  test('back button from projects should navigate to home', async ({ page }) => {
+    // Navigate to projects
+    await getFileGridButton(page, 'projects').click();
+    await expect(page.getByText('~/projects', { exact: true })).toBeVisible();
 
-    // Click Home button in sidebar (the first one)
-    await page.locator('button').filter({ hasText: /^Home$/ }).first().click();
+    // Click back button to go to home
+    await page.getByRole('button', { name: 'Go back to parent directory' }).click();
 
-    // Should be back at home - check for hyeonmin folder in file grid
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
-    // Check terminal shows ~ in prompt (use first() since ~ appears multiple times)
-    await expect(page.getByText('~').first()).toBeVisible();
+    // Should be back at home - check for projects folder in file grid
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
+    // Check terminal shows ~ in prompt
+    await expect(page.getByText('~$').first()).toBeVisible();
   });
 });
 
@@ -73,17 +67,14 @@ test.describe('Back/Forward Navigation', () => {
   test('back button should go to previous directory', async ({ page }) => {
     await page.goto('/');
 
-    // Navigate: ~ -> hyeonmin -> projects
-    await getFileGridButton(page, 'hyeonmin').click();
-    await expect(getFileGridButton(page, 'projects')).toBeVisible();
-
+    // Navigate: ~ -> projects
     await getFileGridButton(page, 'projects').click();
-    await expect(page.getByText('/home/hyeonmin/projects', { exact: true })).toBeVisible();
+    await expect(page.getByText('~/projects', { exact: true })).toBeVisible();
 
-    // Click back button (first button with aria-label for back navigation)
+    // Click back button
     await page.getByRole('button', { name: 'Go back to parent directory' }).click();
 
-    // Should be back in /home/hyeonmin - verify by checking projects folder is visible again
+    // Should be back in ~ - verify by checking projects folder is visible again
     await expect(getFileGridButton(page, 'projects')).toBeVisible();
     await expect(page.getByRole('button', { name: 'md about.md' })).toBeVisible();
   });

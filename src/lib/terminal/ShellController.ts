@@ -37,7 +37,7 @@ export class ShellController {
     const getPrompt = () => {
       const cwd = this.shell.getCwd();
       const displayPath = cwd.replace('/home/guest', '~');
-      return `\x1b[32mguest@portfolio\x1b[0m:\x1b[34m${displayPath}\x1b[0m$ `;
+      return `\x1b[32mguest@addniner\x1b[0m:\x1b[34m${displayPath}\x1b[0m$ `;
     };
 
     this.renderer = new TerminalRenderer(term, { getPrompt });
@@ -51,6 +51,13 @@ export class ShellController {
     this.term.writeln('\x1b[32mPORTFOLIO OS v1.0.0\x1b[0m');
     this.term.writeln('\x1b[90mType \'help\' for commands.\x1b[0m');
     this.term.writeln('');
+    this.renderer.writePrompt();
+  }
+
+  /**
+   * Write a new prompt (used after vim exit)
+   */
+  writePrompt(): void {
     this.renderer.writePrompt();
   }
 
@@ -82,11 +89,8 @@ export class ShellController {
       const input = this.lineBuffer.getBuffer();
       const bufferState = this.lineBuffer.getState();
 
-      const hasClear = input.trim() === 'clear' ||
-        input.includes('&& clear') ||
-        input.includes('; clear') ||
-        input.includes('&&clear') ||
-        input.includes(';clear');
+      // clear가 체인의 어디에 있든 감지
+      const hasClear = /(?:^|&&|;)\s*clear\s*(?:$|&&|;)/.test(input.trim());
 
       if (hasClear) {
         this.lineBuffer.submit();
@@ -291,11 +295,8 @@ export class ShellController {
     const silent = opts?.silent ?? false;
 
     // clear 명령어 특별 처리 (터미널 화면 지우기)
-    const hasClear = input.trim() === 'clear' ||
-      input.includes('&& clear') ||
-      input.includes('; clear') ||
-      input.includes('&&clear') ||
-      input.includes(';clear');
+    // clear가 체인의 어디에 있든 감지: "clear", "clear;", "clear &&", "&& clear", "; clear"
+    const hasClear = /(?:^|&&|;)\s*clear\s*(?:$|&&|;)/.test(input.trim());
 
     if (hasClear) {
       this.renderer.clearForCommand();

@@ -43,14 +43,14 @@ export const cdCommand: CommandDefinition = {
 
     // Generate URL path based on filesystem location
     let urlPath = '/';
-    if (actualPath.startsWith('/home/hyeonmin/projects/')) {
-      const projectName = actualPath.replace('/home/hyeonmin/projects/', '').split('/')[0];
+    if (actualPath.startsWith('/home/guest/projects/')) {
+      const projectName = actualPath.replace('/home/guest/projects/', '').split('/')[0];
       if (projectName) {
         urlPath = `/projects/${projectName}`;
       } else {
         urlPath = '/projects';
       }
-    } else if (actualPath === '/home/hyeonmin/projects') {
+    } else if (actualPath === '/home/guest/projects') {
       urlPath = '/projects';
     }
 

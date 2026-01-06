@@ -161,17 +161,18 @@ export class Shell {
    * 명령어 체인 실행 (&& 또는 ; 로 연결된 명령어들)
    */
   private executeChain(input: string): ExecuteResult {
-    // TODO: parser 연동
-    const commands = this.parseCommandChain(input);
+    const segments = this.parseCommandChain(input);
 
     let lastResult: ExecuteResult = {};
 
-    for (const cmd of commands) {
-      const result = this.executeSingle(cmd);
+    for (const segment of segments) {
+      const result = this.executeSingle(segment.command);
       lastResult = result;
 
-      if (result.error) {
-        break; // && 체인에서 에러 시 중단
+      // && 연산자: 에러 시 중단
+      // ; 연산자: 에러와 무관하게 계속 실행
+      if (result.error && segment.operator === '&&') {
+        break;
       }
     }
 
@@ -179,11 +180,29 @@ export class Shell {
   }
 
   /**
-   * 단일 명령어 파싱 (임시 - 나중에 parser 모듈과 통합)
+   * 명령어 체인 파싱
+   * && : 앞 명령어 성공 시에만 다음 실행
+   * ;  : 앞 명령어 결과와 무관하게 다음 실행
    */
-  private parseCommandChain(input: string): string[] {
-    // 간단한 && 분리
-    return input.split(/\s*&&\s*/).filter(Boolean);
+  private parseCommandChain(input: string): Array<{ command: string; operator: '&&' | ';' | null }> {
+    const result: Array<{ command: string; operator: '&&' | ';' | null }> = [];
+
+    // && 또는 ; 로 분리하되, 어떤 연산자인지 기억
+    const parts = input.split(/(\s*&&\s*|;)/);
+
+    for (let i = 0; i < parts.length; i += 2) {
+      const command = parts[i]?.trim();
+      const operator = parts[i + 1]?.trim() as '&&' | ';' | undefined;
+
+      if (command) {
+        result.push({
+          command,
+          operator: operator === '&&' ? '&&' : operator === ';' ? ';' : null,
+        });
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -193,6 +212,24 @@ export class Shell {
     const parsed = this.parseCommand(input);
     if (!parsed.command) {
       return {};
+    }
+
+    // AUTO_CD: 경로 패턴이면 cd 명령어로 처리
+    if (this.isPathPattern(parsed.command)) {
+      const resolved = this.resolvePathWithSymlinks(parsed.command);
+      if (resolved && resolved.node.type === 'directory') {
+        // cd 명령어로 변환하여 실행
+        const cdCommand = this.commands.get('cd');
+        if (cdCommand) {
+          const result = cdCommand.execute([parsed.command], {}, this);
+          return this.processCommandResult(result);
+        }
+      }
+      // 디렉토리가 아니거나 존재하지 않으면 에러
+      return {
+        output: `${parsed.command}: not a directory or does not exist`,
+        error: true,
+      };
     }
 
     const command = this.commands.get(parsed.command);
@@ -205,6 +242,22 @@ export class Shell {
 
     const result = command.execute(parsed.args, parsed.flags, this);
     return this.processCommandResult(result);
+  }
+
+  /**
+   * AUTO_CD를 위한 경로 패턴 감지
+   * ./, ../, ~/, / 로 시작하는 입력을 경로로 인식
+   */
+  private isPathPattern(input: string): boolean {
+    return (
+      input.startsWith('./') ||
+      input.startsWith('../') ||
+      input.startsWith('~/') ||
+      input.startsWith('/') ||
+      input === '.' ||
+      input === '..' ||
+      input === '~'
+    );
   }
 
   /**

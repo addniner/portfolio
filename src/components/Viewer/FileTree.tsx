@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { ChevronRight, Folder, FileText, ExternalLink, Home, User, FolderKanban } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { ChevronRight, Folder, FileText, ExternalLink, FolderKanban, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useShell } from '@/hooks/useShell';
 import { useAction } from '@/hooks/useAction';
@@ -16,9 +16,10 @@ interface TreeNodeProps {
   currentPath: string;
   depth: number;
   defaultExpanded?: boolean;
+  forceExpand?: boolean | null; // null = no force, true = expand all, false = collapse all
 }
 
-function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: TreeNodeProps) {
+function TreeNode({ node, path, currentPath, depth, defaultExpanded = false, forceExpand = null }: TreeNodeProps) {
   const { dispatch } = useAction();
   const isInPath = currentPath === path || currentPath.startsWith(path + '/');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || isInPath);
@@ -28,8 +29,20 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
   const isSymlink = node.type === 'symlink';
   const isActive = currentPath === path;
 
+  // Handle force expand/collapse
+  useEffect(() => {
+    if (forceExpand === true) {
+      setIsExpanded(true);
+      setUserCollapsed(false);
+    } else if (forceExpand === false) {
+      setIsExpanded(false);
+      setUserCollapsed(true);
+    }
+  }, [forceExpand]);
+
   // Auto-expand if current path is inside this directory (but respect user's collapse choice)
   useEffect(() => {
+    if (forceExpand !== null) return; // Skip auto-expand when force is active
     if (isInPath && !isExpanded && !userCollapsed) {
       setIsExpanded(true);
     }
@@ -37,7 +50,7 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
     if (!isInPath && userCollapsed) {
       setUserCollapsed(false);
     }
-  }, [isInPath, isExpanded, userCollapsed]);
+  }, [isInPath, isExpanded, userCollapsed, forceExpand]);
 
   const handleClick = () => {
     if (isDirectory) {
@@ -145,6 +158,7 @@ function TreeNode({ node, path, currentPath, depth, defaultExpanded = false }: T
               path={`${path}/${name}`}
               currentPath={currentPath}
               depth={depth + 1}
+              forceExpand={forceExpand}
             />
           ))}
         </div>
@@ -157,6 +171,25 @@ export function FileTree({ currentPath }: FileTreeProps) {
   const { shell } = useShell();
   const { dispatch } = useAction();
   const fs = shell.getFilesystem().getRoot();
+
+  // Force expand/collapse state: null = normal, true = expand all, false = collapse all
+  const [forceExpand, setForceExpand] = useState<boolean | null>(null);
+
+  // Reset force state after it's applied
+  const resetForce = useCallback(() => {
+    // Use timeout to allow the effect to propagate first
+    setTimeout(() => setForceExpand(null), 100);
+  }, []);
+
+  const handleExpandAll = () => {
+    setForceExpand(true);
+    resetForce();
+  };
+
+  const handleCollapseAll = () => {
+    setForceExpand(false);
+    resetForce();
+  };
 
   // Start from root, but expand home/guest by default
   const rootChildren = useMemo(() => {
@@ -176,23 +209,20 @@ export function FileTree({ currentPath }: FileTreeProps) {
     dispatch({ type: 'NAVIGATE', path });
   };
 
-  // Quick access items
+  // Quick access items - Projects only
   const quickItems = [
-    { label: 'Home', icon: Home, path: '~', color: 'text-info' },
-    { label: 'hyeonmin', icon: User, path: '/home/hyeonmin', color: 'text-primary' },
-    { label: 'Projects', icon: FolderKanban, path: '/home/hyeonmin/projects', color: 'text-success' },
+    { label: 'Projects', icon: FolderKanban, path: '/home/guest/projects', color: 'text-success' },
   ];
 
   const isActivePath = (itemPath: string) => {
-    const normalizedPath = currentPath.replace('/home/guest', '~');
-    return normalizedPath === itemPath || currentPath === itemPath;
+    return currentPath === itemPath || currentPath.startsWith(itemPath + '/');
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full">
       {/* Favorites Section */}
-      <div className="px-3 py-2">
-        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="px-3 py-2 shrink-0">
+        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground tracking-wider">
           Favorites
         </div>
         {quickItems.map((item) => {
@@ -218,20 +248,43 @@ export function FileTree({ currentPath }: FileTreeProps) {
       </div>
 
       {/* File Tree Section */}
-      <div className="px-3 py-2 flex-1 overflow-y-auto">
-        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-          Files
+      <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
+        <div className="flex items-center justify-between px-3 py-2 shrink-0">
+          <span className="text-[11px] font-semibold text-muted-foreground tracking-wider">
+            Files
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleExpandAll}
+              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Expand all folders"
+              title="Expand all"
+            >
+              <ChevronsUpDown className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleCollapseAll}
+              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Collapse all folders"
+              title="Collapse all"
+            >
+              <ChevronsDownUp className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-        {rootChildren.map(([name, node]) => (
-          <TreeNode
-            key={name}
-            node={node}
-            path={`/${name}`}
-            currentPath={currentPath}
-            depth={0}
-            defaultExpanded={name === 'home'}
-          />
-        ))}
+        <div className="flex-1 overflow-y-auto">
+          {rootChildren.map(([name, node]) => (
+            <TreeNode
+              key={name}
+              node={node}
+              path={`/${name}`}
+              currentPath={currentPath}
+              depth={0}
+              defaultExpanded={name === 'home'}
+              forceExpand={forceExpand}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

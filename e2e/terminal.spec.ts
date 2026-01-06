@@ -13,8 +13,8 @@ test.describe('Terminal Commands', () => {
   });
 
   test('should show initial directory view', async ({ page }) => {
-    // Should show FileExplorer with hyeonmin folder (symlink in /home/guest)
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    // Should show FileExplorer with projects folder in /home/guest
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('help command should output to terminal only', async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText('Use Tab for autocomplete')).toBeVisible();
 
     // Viewer should NOT change - still show FileExplorer
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('ls command should output to terminal only', async ({ page }) => {
@@ -35,11 +35,11 @@ test.describe('Terminal Commands', () => {
     await terminal.fill('ls');
     await terminal.press('Enter');
 
-    // Should show directory listing in terminal (use first match since sidebar also shows 'hyeonmin')
-    await expect(page.getByText('hyeonmin').first()).toBeVisible();
+    // Should show directory listing in terminal
+    await expect(page.getByText('projects/').first()).toBeVisible();
 
     // Viewer should NOT change
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('ls / should not change viewer', async ({ page }) => {
@@ -51,7 +51,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText(/home\//)).toBeVisible();
 
     // Viewer should still show /home/guest (not root)
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('whoami command should output to terminal only', async ({ page }) => {
@@ -63,37 +63,36 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText('Hyeonmin Lee')).toBeVisible();
 
     // Viewer should NOT change
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('cd command should change directory and viewer', async ({ page }) => {
     const terminal = page.getByRole('textbox', { name: 'Terminal input' });
-    await terminal.fill('cd hyeonmin');
+    await terminal.fill('cd projects');
     await terminal.press('Enter');
 
     // Prompt should show new directory
-    await expect(page.getByText('/home/hyeonmin', { exact: true })).toBeVisible();
+    await expect(page.getByText('~/projects', { exact: true })).toBeVisible();
 
-    // Viewer should show contents of /home/hyeonmin
-    await expect(getFileGridButton(page, 'projects')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'md about.md' })).toBeVisible();
+    // Viewer should show contents of ~/projects (project files)
+    await expect(page.getByRole('button', { name: 'md portfolio.md' })).toBeVisible();
   });
 
   test('cd ~ should return to home directory', async ({ page }) => {
     const terminal = page.getByRole('textbox', { name: 'Terminal input' });
 
     // First navigate away
-    await terminal.fill('cd hyeonmin');
+    await terminal.fill('cd projects');
     await terminal.press('Enter');
-    await expect(page.getByText('/home/hyeonmin', { exact: true })).toBeVisible();
+    await expect(page.getByText('~/projects', { exact: true })).toBeVisible();
 
     // Then go home
     await terminal.fill('cd ~');
     await terminal.press('Enter');
 
     // Prompt should show ~ (home) - use first match since ~ appears multiple times in terminal
-    await expect(page.getByText('~').first()).toBeVisible();
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    await expect(page.getByText('~$').first()).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('clear command should clear terminal only', async ({ page }) => {
@@ -112,7 +111,7 @@ test.describe('Terminal Commands', () => {
     await expect(page.getByText('Available commands:')).not.toBeVisible();
 
     // Viewer should still be the same
-    await expect(getFileGridButton(page, 'hyeonmin')).toBeVisible();
+    await expect(getFileGridButton(page, 'projects')).toBeVisible();
   });
 
   test('unknown command should show error', async ({ page }) => {
@@ -125,22 +124,18 @@ test.describe('Terminal Commands', () => {
 
   test('command chaining with && should work', async ({ page }) => {
     const terminal = page.getByRole('textbox', { name: 'Terminal input' });
-    await terminal.fill('cd hyeonmin && ls');
+    await terminal.fill('cd projects && ls');
     await terminal.press('Enter');
 
-    // Should show ls output
-    await expect(page.getByText(/projects\//)).toBeVisible();
+    // Should show ls output (project files) - ls shows space-separated output
+    await expect(page.getByText('portfolio.md').first()).toBeVisible();
 
-    // Viewer should show /home/hyeonmin
-    await expect(getFileGridButton(page, 'projects')).toBeVisible();
+    // Viewer should show ~/projects
+    await expect(page.getByRole('button', { name: 'md portfolio.md' })).toBeVisible();
   });
 
   test('command chaining with && should stop on error', async ({ page }) => {
     const terminal = page.getByRole('textbox', { name: 'Terminal input' });
-
-    // First cd to hyeonmin
-    await terminal.fill('cd hyeonmin');
-    await terminal.press('Enter');
 
     // Try to cd to nonexistent directory && ls
     await terminal.fill('cd nonexistent && ls');
@@ -171,11 +166,7 @@ test.describe('Terminal Commands', () => {
   test('vim command should open file in vim mode', async ({ page }) => {
     const terminal = page.getByRole('textbox', { name: 'Terminal input' });
 
-    // Navigate to hyeonmin first
-    await terminal.fill('cd hyeonmin');
-    await terminal.press('Enter');
-
-    // Open about.md in vim
+    // Open about.md in vim (it's in home directory)
     await terminal.fill('vim about.md');
     await terminal.press('Enter');
 

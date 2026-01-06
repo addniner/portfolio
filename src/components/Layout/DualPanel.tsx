@@ -82,14 +82,11 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
           {viewer}
         </div>
 
-        {/* Terminal Window */}
+        {/* Terminal Window - Viewer와 동일한 스타일 */}
         <div
           className={cn(
-            'rounded-2xl overflow-hidden',
+            'window-glass rounded-2xl overflow-hidden',
             'flex flex-col min-h-0 min-w-0',
-            'bg-dracula-bg/95 border border-window-border',
-            'shadow-[0_8px_32px_var(--window-shadow),0_4px_16px_var(--window-shadow)]',
-            'backdrop-blur-xl',
             'transition-all duration-300 ease-out',
             isTerminalVisible
               ? visibleCount === 2

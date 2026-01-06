@@ -18,7 +18,7 @@ function getActionFromUrl(pathname: string): Action | null {
   }
 
   if (normalizedPath === '/about') {
-    return { type: 'OPEN_FILE', path: 'hyeonmin/about.md' };
+    return { type: 'OPEN_FILE', path: 'about.md' };
   }
 
   if (normalizedPath.startsWith('/projects/')) {

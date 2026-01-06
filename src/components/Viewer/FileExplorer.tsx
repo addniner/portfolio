@@ -14,7 +14,7 @@ import {
   PanelLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useIsMobileWithInit } from '@/hooks/useMediaQuery';
 import { FOLDER_COLORS, FILE_COLORS } from '@/config/colors';
 import { FileTree } from './FileTree';
@@ -136,11 +136,11 @@ export function FileExplorer({ path }: FileExplorerProps) {
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className={cn(
-                'relative z-20 shrink-0 overflow-hidden',
+                'relative z-20 shrink-0 overflow-hidden h-full',
                 isMobile && 'absolute inset-0 bg-background/95 backdrop-blur-sm'
               )}
             >
-              <div className={cn(isMobile ? 'w-full' : 'w-56')}>
+              <div className={cn('h-full', isMobile ? 'w-full' : 'w-56')}>
                 <FileTree currentPath={path} />
               </div>
               {/* Mobile close button */}
@@ -276,7 +276,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
           ) : isMobile ? (
             /* Mobile: List View */
             <div className="flex flex-col gap-1">
-              {visibleContents.map((node, index) => {
+              {visibleContents.map((node) => {
                 const isFolder = node.type === 'directory' || node.type === 'symlink';
                 const isSymlink = node.type === 'symlink';
                 const ext = node.name.split('.').pop() || '';
@@ -285,11 +285,8 @@ export function FileExplorer({ path }: FileExplorerProps) {
                   : FILE_COLORS[ext] || 'from-gray-500 to-gray-700';
 
                 return (
-                  <motion.button
+                  <button
                     key={node.name}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.03, duration: 0.2 }}
                     onClick={() => handleItemClick(node)}
                     className={cn(
                       'group flex items-center gap-3 p-3 rounded-xl',
@@ -343,14 +340,14 @@ export function FileExplorer({ path }: FileExplorerProps) {
 
                     {/* Chevron */}
                     <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
-                  </motion.button>
+                  </button>
                 );
               })}
             </div>
           ) : (
             /* Desktop: Grid View */
             <div className="flex flex-wrap content-start gap-3">
-              {visibleContents.map((node, index) => {
+              {visibleContents.map((node) => {
                 const isFolder = node.type === 'directory' || node.type === 'symlink';
                 const isSymlink = node.type === 'symlink';
                 const ext = node.name.split('.').pop() || '';
@@ -359,11 +356,8 @@ export function FileExplorer({ path }: FileExplorerProps) {
                   : FILE_COLORS[ext] || 'from-gray-500 to-gray-700';
 
                 return (
-                  <motion.button
+                  <button
                     key={node.name}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.3 }}
                     onClick={() => handleItemClick(node)}
                     className={cn(
                       'group flex flex-col items-center gap-2 p-2 rounded-xl',
@@ -425,7 +419,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                     >
                       {node.name}
                     </span>
-                  </motion.button>
+                  </button>
                 );
               })}
             </div>

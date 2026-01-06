@@ -7,19 +7,6 @@
         "guest": {
           "type": "directory",
           "children": {
-            ".bashrc": {
-              "type": "file",
-              "content": "# Guest user bashrc\nexport PS1=\"guest@portfolio:~$ \""
-            },
-            "hyeonmin": {
-              "type": "symlink",
-              "target": "/home/hyeonmin"
-            }
-          }
-        },
-        "hyeonmin": {
-          "type": "directory",
-          "children": {
             "projects": {
               "type": "directory",
               "dynamic": "projects"
@@ -65,7 +52,7 @@
         },
         "hostname": {
           "type": "file",
-          "content": "portfolio.hyeonmin.dev"
+          "content": "addniner.com"
         }
       }
     }

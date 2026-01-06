@@ -10,7 +10,7 @@
  */
 
 import { getProjectNames } from '@/data';
-import { getFilesystem, resolvePath } from '@/lib/filesystem';
+import { getFilesystem, resolvePath, normalizePath } from '@/lib/filesystem';
 
 /**
  * 명령어별 completer 매핑
@@ -73,38 +73,121 @@ registerCompleter('_projects', {
   },
 });
 
-// _paths: cd용 디렉토리 완성 (현재 디렉토리 기준)
+// _paths: cd용 디렉토리 완성 (중첩 경로 지원)
 registerCompleter('_paths', {
   generate: (prefix: string, cwd: string) => {
     const fs = getFilesystem();
 
-    // 현재 디렉토리의 하위 디렉토리들 가져오기
-    const currentDir = resolvePath(cwd, fs);
+    // prefix에서 디렉토리 부분과 파일명 부분 분리
+    // 예: "projects/port" -> basePath: "projects/", partial: "port"
+    const lastSlash = prefix.lastIndexOf('/');
+    let basePath = '';
+    let partial = prefix;
+
+    if (lastSlash >= 0) {
+      basePath = prefix.slice(0, lastSlash + 1); // 슬래시 포함
+      partial = prefix.slice(lastSlash + 1);
+    }
+
+    // 탐색할 경로 결정 - normalizePath로 ./ ../ ~ 등 처리
+    let searchPath = cwd;
+    if (basePath) {
+      // normalizePath가 ~, .., . 등을 모두 처리
+      searchPath = normalizePath(basePath.replace(/\/+$/, ''), cwd);
+    }
+
+    const currentDir = resolvePath(searchPath, fs);
     const directories: string[] = [];
 
     if (currentDir?.type === 'directory' && currentDir.children) {
       for (const [name, node] of Object.entries(currentDir.children)) {
-        // 디렉토리와 심볼릭 링크만 포함 (숨김 파일 제외)
-        if ((node.type === 'directory' || node.type === 'symlink') && !name.startsWith('.')) {
-          directories.push(name);
+        // 디렉토리와 심볼릭 링크만 포함 (숨김 파일 제외, 단 partial이 .로 시작하면 포함)
+        const isHidden = name.startsWith('.');
+        if ((node.type === 'directory' || node.type === 'symlink') &&
+            (!isHidden || partial.startsWith('.'))) {
+          // basePath가 있으면 전체 경로로 반환
+          directories.push(basePath + name);
         }
       }
     }
 
-    // 특수 경로는 사용자가 해당 문자로 시작할 때만 표시
+    // 특수 경로는 basePath가 없고 사용자가 해당 문자로 시작할 때만 표시
     const specialPaths: string[] = [];
-    if (prefix.startsWith('~')) {
-      specialPaths.push('~');
-    }
-    if (prefix.startsWith('.')) {
-      specialPaths.push('..');
-    }
-    if (prefix.startsWith('/')) {
-      specialPaths.push('/');
+    if (!basePath) {
+      if (prefix.startsWith('~')) {
+        specialPaths.push('~/');
+      }
+      if (prefix.startsWith('.')) {
+        specialPaths.push('./');
+        specialPaths.push('../');
+      }
+      if (prefix.startsWith('/')) {
+        specialPaths.push('/');
+      }
     }
 
     // 디렉토리 먼저, 그 다음 특수 경로
     const allOptions = [...directories, ...specialPaths];
+    return allOptions.filter(
+      opt => opt.startsWith(prefix) && opt !== prefix
+    );
+  },
+});
+
+// _files: vim용 파일+디렉토리 완성 (중첩 경로 지원)
+registerCompleter('_files', {
+  generate: (prefix: string, cwd: string) => {
+    const fs = getFilesystem();
+
+    // prefix에서 디렉토리 부분과 파일명 부분 분리
+    const lastSlash = prefix.lastIndexOf('/');
+    let basePath = '';
+    let partial = prefix;
+
+    if (lastSlash >= 0) {
+      basePath = prefix.slice(0, lastSlash + 1);
+      partial = prefix.slice(lastSlash + 1);
+    }
+
+    // 탐색할 경로 결정 - normalizePath로 ./ ../ ~ 등 처리
+    let searchPath = cwd;
+    if (basePath) {
+      searchPath = normalizePath(basePath.replace(/\/+$/, ''), cwd);
+    }
+
+    const currentDir = resolvePath(searchPath, fs);
+    const items: string[] = [];
+
+    if (currentDir?.type === 'directory' && currentDir.children) {
+      for (const [name, node] of Object.entries(currentDir.children)) {
+        const isHidden = name.startsWith('.');
+        if (!isHidden || partial.startsWith('.')) {
+          // 디렉토리는 / 붙여서, 파일은 그대로
+          if (node.type === 'directory' || node.type === 'symlink') {
+            items.push(basePath + name + '/');
+          } else {
+            items.push(basePath + name);
+          }
+        }
+      }
+    }
+
+    // 특수 경로
+    const specialPaths: string[] = [];
+    if (!basePath) {
+      if (prefix.startsWith('~')) {
+        specialPaths.push('~/');
+      }
+      if (prefix.startsWith('.')) {
+        specialPaths.push('./');
+        specialPaths.push('../');
+      }
+      if (prefix.startsWith('/')) {
+        specialPaths.push('/');
+      }
+    }
+
+    const allOptions = [...items, ...specialPaths];
     return allOptions.filter(
       opt => opt.startsWith(prefix) && opt !== prefix
     );
@@ -116,4 +199,5 @@ registerCompleter('_paths', {
 // ============================================
 
 compdef('_paths', 'cd');
-compdef('_projects', 'cat', 'open');
+compdef('_files', 'vim', 'vi', 'cat');
+compdef('_projects', 'open');

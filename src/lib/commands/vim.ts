@@ -37,7 +37,7 @@ export const vimCommand: CommandDefinition = {
     let urlPath: string | undefined;
     if (node.meta?.project) {
       urlPath = `/projects/${node.meta.project.name}`;
-    } else if (targetPath === '/home/hyeonmin/about.md' || targetPath === '/home/guest/about.md') {
+    } else if (targetPath === '/home/guest/about.md') {
       urlPath = '/about';
     }
 

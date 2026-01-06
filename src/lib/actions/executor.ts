@@ -33,9 +33,9 @@ export function actionToCommand(action: Action): string {
 
     // Project
     case 'OPEN_PROJECT':
-      return cmd.chain(cmd.cd('hyeonmin/projects'), cmd.vim(`${action.name}.md`));
+      return cmd.chain(cmd.cd('projects'), cmd.vim(`${action.name}.md`));
     case 'LIST_PROJECTS':
-      return cmd.chain(cmd.cd('hyeonmin/projects'), cmd.ls());
+      return cmd.chain(cmd.cd('projects'), cmd.ls());
 
     // System
     case 'CLEAR':

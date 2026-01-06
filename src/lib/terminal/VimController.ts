@@ -70,13 +70,15 @@ export class VimController {
     this.options.onExit();
   }
 
-  // Sync state from external source
+  // Sync state from external source (e.g., VimViewer close button)
   syncFromExternal(vimMode: { filePath: string; content: string } | null): void {
     if (!vimMode && this.state) {
-      // External says close but we're open
+      // External says close but we're open - exit vim mode
       this.state = null;
       this.term.write('\x1b[?1049l');
       this.term.write('\x1b[?25h');
+      // Call onExit to restore terminal prompt
+      this.options.onExit();
     } else if (vimMode && !this.state) {
       // External says open but we're closed
       this.enter(vimMode.filePath, vimMode.content);
