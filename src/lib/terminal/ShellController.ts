@@ -25,6 +25,7 @@ export class ShellController {
   private renderer: TerminalRenderer;
   private menuComplete: MenuComplete;
   private options: ShellControllerOptions;
+  private isComposing = false;
 
   constructor(term: Terminal, options: ShellControllerOptions) {
     this.term = term;
@@ -41,6 +42,32 @@ export class ShellController {
     };
 
     this.renderer = new TerminalRenderer(term, { getPrompt });
+
+    // IME composition 이벤트 처리 (한글 입력 등)
+    this.setupCompositionHandlers();
+  }
+
+  /**
+   * IME composition 이벤트 핸들러 설정
+   * 한글 등 조합형 문자 입력 시 자소 분리 방지
+   */
+  private setupCompositionHandlers(): void {
+    // xterm 내부의 textarea 요소 찾기
+    const textarea = this.term.element?.querySelector('textarea');
+    if (!textarea) return;
+
+    textarea.addEventListener('compositionstart', () => {
+      this.isComposing = true;
+    });
+
+    textarea.addEventListener('compositionend', (e: CompositionEvent) => {
+      this.isComposing = false;
+      // 조합 완료된 문자 삽입
+      if (e.data) {
+        this.lineBuffer.insert(e.data);
+        this.updateHint();
+      }
+    });
   }
 
   getHistory(): string[] {
@@ -233,8 +260,8 @@ export class ShellController {
       return;
     }
 
-    // Printable characters
-    if (code >= 32) {
+    // Printable characters (IME 조합 중이 아닐 때만)
+    if (code >= 32 && !this.isComposing) {
       this.lineBuffer.insert(data);
       this.updateHint();
     }

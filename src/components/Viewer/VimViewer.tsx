@@ -5,6 +5,7 @@ import { WindowHeader } from '@/components/ui/WindowHeader';
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
@@ -69,6 +70,9 @@ export function VimViewer({ path }: VimViewerProps) {
               {getFileIcon(filename)}
               <span className="truncate">{filename}</span>
             </DrawerTitle>
+            <DrawerDescription className="sr-only">
+              {filename} 파일 내용
+            </DrawerDescription>
           </DrawerHeader>
 
           {/* Content area */}
