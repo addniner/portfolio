@@ -21,9 +21,9 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
   // Mobile: show one panel at a time with segment control switching (full screen)
   if (isMobile) {
     return (
-      <div className="h-dvh w-screen overflow-hidden bg-depth relative">
-        {/* Full screen panel container - no padding, just bottom space for controls */}
-        <div className="h-full w-full pb-16">
+      <div className="h-dvh w-screen overflow-hidden relative">
+        {/* Content area - full screen */}
+        <div className="h-full w-full">
           {/* Viewer Window (shown when active) - full screen */}
           <div
             className={cn(
@@ -49,8 +49,13 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
           </div>
         </div>
 
-        {/* Mobile Segment Control */}
-        <MobileSegmentControl />
+        {/* Mobile Segment Control - floating over content */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 z-50"
+          style={{ bottom: 'max(0.5rem, env(safe-area-inset-bottom, 0.5rem))' }}
+        >
+          <MobileSegmentControl />
+        </div>
       </div>
     );
   }

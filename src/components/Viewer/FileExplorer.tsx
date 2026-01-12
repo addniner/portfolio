@@ -420,7 +420,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
         </div>
 
         {/* Status Bar */}
-        <div className="relative z-10 mx-2 sm:mr-4 sm:ml-0 mb-2 sm:mb-4 px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs text-muted-foreground">
+        <div className="relative z-10 mx-2 sm:mr-4 sm:ml-0 mb-16 sm:mb-4 px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs text-muted-foreground">
           {visibleContents.length} {visibleContents.length === 1 ? 'item' : 'items'}
         </div>
       </div>

@@ -40,8 +40,7 @@ export function MobileSegmentControl() {
   return (
     <div
       className={cn(
-        'fixed bottom-4 left-1/2 -translate-x-1/2 z-50',
-        'flex items-center gap-2',
+        'flex items-center justify-center gap-2',
         'px-1.5 py-1.5',
         'rounded-2xl',
         'bg-dock-bg border border-dock-border',
