@@ -333,6 +333,7 @@
     -moz-osx-font-smoothing: grayscale;
     position: fixed;
     width: 100%;
+    overscroll-behavior: none;
     @apply bg-background text-foreground;
   }
 
