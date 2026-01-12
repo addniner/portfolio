@@ -324,12 +324,15 @@
     height: 100%;
     margin: 0;
     padding: 0;
+    overflow: hidden;
   }
 
   body {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    position: fixed;
+    width: 100%;
     @apply bg-background text-foreground;
   }
 
