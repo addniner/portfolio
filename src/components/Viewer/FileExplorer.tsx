@@ -17,7 +17,11 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'motion/react';
 import { useIsMobileWithInit } from '@/hooks/useMediaQuery';
 import { FOLDER_COLORS, FILE_COLORS } from '@/config/colors';
+import { ICON_SIZES } from '@/config/icons';
+import { isHomePath } from '@/config/paths';
 import { FileTree } from './FileTree';
+import { ThumbnailIcon } from '@/components/ui/ThumbnailIcon';
+import { getProjectThumbnail } from '@/lib/thumbnail';
 
 interface FileExplorerProps {
   path: string;
@@ -276,6 +280,10 @@ export function FileExplorer({ path }: FileExplorerProps) {
                 const gradientColor = isFolder
                   ? FOLDER_COLORS[node.name] || 'from-blue-400 to-indigo-600'
                   : FILE_COLORS[ext] || 'from-gray-500 to-gray-700';
+                // 홈 디렉토리 하위 항목에 썸네일 표시 (파일도 포함)
+                const isProjectsDir = isHomePath(path);
+                const projectName = node.name.replace(/\.md$/, ''); // .md 확장자 제거
+                const thumbnail = isProjectsDir ? getProjectThumbnail(projectName) : null;
 
                 return (
                   <button
@@ -289,18 +297,29 @@ export function FileExplorer({ path }: FileExplorerProps) {
                       'focus:outline-none focus:ring-2 focus:ring-focus-ring'
                     )}
                   >
-                    {/* Icon */}
+                    {/* Icon or Thumbnail */}
                     <div className="relative shrink-0">
-                      {isFolder ? (
+                      {thumbnail ? (
+                        <ThumbnailIcon
+                          src={thumbnail}
+                          alt={node.name}
+                          isFolder={isFolder}
+                          gradientColor={gradientColor}
+                          size="sm"
+                          ext={ext}
+                          className="shadow-md shadow-shadow"
+                        />
+                      ) : isFolder ? (
                         <div
                           className={cn(
-                            'w-10 h-10 rounded-lg bg-linear-to-br',
+                            ICON_SIZES.sm.container,
+                            'rounded-lg bg-linear-to-br',
                             'flex items-center justify-center',
                             'shadow-md shadow-shadow',
                             gradientColor
                           )}
                         >
-                          <Folder className="w-5 h-5 text-white/90" />
+                          <Folder className={cn(ICON_SIZES.sm.icon, 'text-white/90')} />
                           {isSymlink && (
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-secondary rounded-full flex items-center justify-center border border-border">
                               <ExternalLink className="w-2 h-2 text-muted-foreground" />
@@ -310,13 +329,14 @@ export function FileExplorer({ path }: FileExplorerProps) {
                       ) : (
                         <div
                           className={cn(
-                            'w-10 h-10 rounded-lg bg-linear-to-br',
+                            ICON_SIZES.sm.container,
+                            'rounded-lg bg-linear-to-br',
                             'flex items-center justify-center relative',
                             'shadow-md shadow-shadow',
                             gradientColor
                           )}
                         >
-                          <FileText className="w-5 h-5 text-white/90" />
+                          <FileText className={cn(ICON_SIZES.sm.icon, 'text-white/90')} />
                         </div>
                       )}
                     </div>
@@ -327,7 +347,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                         {node.name}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {isFolder ? 'Folder' : ext.toUpperCase()}
+                        {isFolder ? (thumbnail ? 'Project' : 'Folder') : ext.toUpperCase()}
                       </span>
                     </div>
 
@@ -347,6 +367,10 @@ export function FileExplorer({ path }: FileExplorerProps) {
                 const gradientColor = isFolder
                   ? FOLDER_COLORS[node.name] || 'from-blue-400 to-indigo-600'
                   : FILE_COLORS[ext] || 'from-gray-500 to-gray-700';
+                // 홈 디렉토리 하위 항목에 썸네일 표시 (파일도 포함)
+                const isProjectsDir = isHomePath(path);
+                const projectName = node.name.replace(/\.md$/, ''); // .md 확장자 제거
+                const thumbnail = isProjectsDir ? getProjectThumbnail(projectName) : null;
 
                 return (
                   <button
@@ -360,12 +384,27 @@ export function FileExplorer({ path }: FileExplorerProps) {
                       'focus:outline-none focus:ring-2 focus:ring-focus-ring'
                     )}
                   >
-                    {/* Icon */}
+                    {/* Icon or Thumbnail */}
                     <div className="relative">
-                      {isFolder ? (
+                      {thumbnail ? (
+                        <ThumbnailIcon
+                          src={thumbnail}
+                          alt={node.name}
+                          isFolder={isFolder}
+                          gradientColor={gradientColor}
+                          size="md"
+                          ext={ext}
+                          className={cn(
+                            'shadow-lg shadow-shadow-strong',
+                            'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
+                            'group-hover:rotate-[-2deg]'
+                          )}
+                        />
+                      ) : isFolder ? (
                         <div
                           className={cn(
-                            'w-16 h-14 rounded-lg bg-linear-to-br',
+                            ICON_SIZES.md.container,
+                            'rounded-lg bg-linear-to-br',
                             'flex items-center justify-center',
                             'shadow-lg shadow-shadow-strong',
                             'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
@@ -373,7 +412,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                             gradientColor
                           )}
                         >
-                          <Folder className="w-8 h-8 text-white/90 drop-shadow-md" />
+                          <Folder className={cn(ICON_SIZES.md.icon, 'text-white/90 drop-shadow-md')} />
                           {isSymlink && (
                             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-secondary backdrop-blur-sm rounded-full flex items-center justify-center border border-border shadow-lg">
                               <ExternalLink className="w-3 h-3 text-muted-foreground" />
@@ -383,7 +422,8 @@ export function FileExplorer({ path }: FileExplorerProps) {
                       ) : (
                         <div
                           className={cn(
-                            'w-16 h-20 rounded-lg bg-linear-to-br',
+                            ICON_SIZES.mdFile.container,
+                            'rounded-lg bg-linear-to-br',
                             'flex flex-col items-center justify-center relative',
                             'shadow-lg shadow-shadow-strong',
                             'group-hover:scale-110 group-hover:shadow-xl transition-all duration-300',
@@ -393,7 +433,7 @@ export function FileExplorer({ path }: FileExplorerProps) {
                         >
                           {/* Folded corner */}
                           <div className="absolute top-0 right-0 w-4 h-4 bg-white/20 rounded-bl-md" />
-                          <FileText className="w-7 h-7 text-white/90 drop-shadow-md" />
+                          <FileText className={cn(ICON_SIZES.mdFile.icon, 'text-white/90 drop-shadow-md')} />
                           {/* File extension badge */}
                           <span className="mt-1 px-1.5 py-0.5 bg-black/30 backdrop-blur-sm rounded text-[9px] text-white/90 uppercase font-semibold tracking-wide">
                             {ext}

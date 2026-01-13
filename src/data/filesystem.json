@@ -6,11 +6,8 @@
       "children": {
         "guest": {
           "type": "directory",
+          "dynamic": "projects",
           "children": {
-            "projects": {
-              "type": "directory",
-              "dynamic": "projects"
-            },
             "about.md": {
               "type": "file",
               "icon": "User",

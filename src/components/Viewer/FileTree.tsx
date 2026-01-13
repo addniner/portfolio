@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronRight, Folder, FileText, ExternalLink, FolderKanban, ChevronsUpDown, ChevronsDownUp, X } from 'lucide-react';
+import { ChevronRight, Folder, FileText, ExternalLink, Home, ChevronsUpDown, ChevronsDownUp, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useShell } from '@/hooks/useShell';
 import { useAction } from '@/hooks/useAction';
@@ -212,7 +212,7 @@ export function FileTree({ currentPath, onClose }: FileTreeProps) {
 
   // Quick access items - Projects only
   const quickItems = [
-    { label: 'Projects', icon: FolderKanban, path: '/home/guest/projects', color: 'text-success' },
+    { label: 'Home', icon: Home, path: '/home/guest', color: 'text-success' },
   ];
 
   const isActivePath = (itemPath: string) => {
