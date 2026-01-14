@@ -7,21 +7,11 @@ import { useTheme } from '@/context/ThemeContext';
 type Tab = 'finder' | 'terminal';
 
 export function MobileSegmentControl() {
-  const { state, setTerminalVisible, setViewerVisible } = useTerminalContext();
+  const { state, switchToTab } = useTerminalContext();
   const { theme, setTheme } = useTheme();
 
   // Determine active tab based on visibility state
   const activeTab: Tab = state.isTerminalVisible && !state.isViewerVisible ? 'terminal' : 'finder';
-
-  const handleTabChange = (tab: Tab) => {
-    if (tab === 'finder') {
-      setViewerVisible(true);
-      setTerminalVisible(false);
-    } else {
-      setTerminalVisible(true);
-      setViewerVisible(false);
-    }
-  };
 
   const cycleTheme = () => {
     const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
@@ -63,7 +53,7 @@ export function MobileSegmentControl() {
 
         {/* Finder Tab */}
         <button
-          onClick={() => handleTabChange('finder')}
+          onClick={() => switchToTab('finder')}
           className={cn(
             'relative z-10 flex items-center gap-2 px-4 py-2 rounded-lg',
             'text-sm font-medium transition-colors duration-200',
@@ -78,7 +68,7 @@ export function MobileSegmentControl() {
 
         {/* Terminal Tab */}
         <button
-          onClick={() => handleTabChange('terminal')}
+          onClick={() => switchToTab('terminal')}
           className={cn(
             'relative z-10 flex items-center gap-2 px-4 py-2 rounded-lg',
             'text-sm font-medium transition-colors duration-200',

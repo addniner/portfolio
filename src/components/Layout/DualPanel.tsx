@@ -5,7 +5,6 @@ import { useTerminalContext } from '@/context/TerminalContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { Dock } from '@/components/ui/Dock';
 import { MobileSegmentControl } from '@/components/ui/MobileSegmentControl';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface DualPanelProps {
   terminal: ReactNode;
@@ -13,7 +12,7 @@ interface DualPanelProps {
 }
 
 export function DualPanel({ terminal, viewer }: DualPanelProps) {
-  const { state, setTerminalVisible, setViewerVisible } = useTerminalContext();
+  const { state, switchToTab } = useTerminalContext();
   const { isTerminalVisible, isViewerVisible } = state;
   const isMobile = useIsMobile();
 
@@ -51,13 +50,9 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
       const threshold = 50; // 50px 이상 스와이프하면 전환
 
       if (dragOffset > threshold && activeTab === 'terminal') {
-        // 오른쪽으로 스와이프 → Finder로 전환
-        setViewerVisible(true);
-        setTerminalVisible(false);
+        switchToTab('finder');
       } else if (dragOffset < -threshold && activeTab === 'finder') {
-        // 왼쪽으로 스와이프 → Terminal로 전환
-        setTerminalVisible(true);
-        setViewerVisible(false);
+        switchToTab('terminal');
       }
     }
 
@@ -69,7 +64,13 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
   const visibleCount = (isViewerVisible ? 1 : 0) + (isTerminalVisible ? 1 : 0);
 
   // Mobile: show one panel at a time with swipe gesture and slide animation
+  // Both panels are always mounted, only transform changes (no unmount/mount flicker)
   if (isMobile) {
+    // Calculate slide position: finder at 0%, terminal at -50% (since container is 200% wide)
+    const baseOffset = activeTab === 'finder' ? 0 : -50;
+    const dragPercent = (dragOffset / window.innerWidth) * 50; // 50% because container is 200%
+    const slideOffset = baseOffset + dragPercent;
+
     return (
       <div
         className="h-dvh w-screen overflow-hidden relative"
@@ -77,47 +78,23 @@ export function DualPanel({ terminal, viewer }: DualPanelProps) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Content area with slide animation */}
+        {/* Sliding container - both panels side by side */}
         <div
-          className="h-full w-full relative"
+          className="h-full flex will-change-transform"
           style={{
-            transform: isDragging ? `translateX(${dragOffset}px)` : undefined,
-            transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+            width: '200%',
+            transform: `translateX(${slideOffset}%) translateZ(0)`,
+            transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)',
           }}
         >
-          <AnimatePresence mode="popLayout" initial={false}>
-            {activeTab === 'finder' ? (
-              <motion.div
-                key="finder"
-                initial={{ x: '-100%', opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: '-100%', opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className={cn(
-                  'absolute inset-0',
-                  'h-full w-full overflow-hidden',
-                  'bg-background'
-                )}
-              >
-                {viewer}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="terminal"
-                initial={{ x: '100%', opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: '100%', opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className={cn(
-                  'absolute inset-0',
-                  'h-full w-full overflow-hidden',
-                  'bg-dracula-bg'
-                )}
-              >
-                {terminal}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Finder panel */}
+          <div className="w-1/2 h-full overflow-hidden bg-background">
+            {viewer}
+          </div>
+          {/* Terminal panel */}
+          <div className="w-1/2 h-full overflow-hidden bg-dracula-bg">
+            {terminal}
+          </div>
         </div>
 
         {/* Mobile Segment Control - floating over content */}

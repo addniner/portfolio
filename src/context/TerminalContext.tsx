@@ -28,6 +28,7 @@ interface TerminalContextValue {
   setViewerVisible: (visible: boolean) => void;
   toggleTerminal: () => void;
   toggleViewer: () => void;
+  switchToTab: (tab: 'finder' | 'terminal') => void;
   registerExecuteCommand: (fn: (cmd: string, options?: { silent?: boolean }) => void) => void;
 }
 
@@ -99,6 +100,17 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     });
   }, [updateUrl]);
 
+  const switchToTab = useCallback((tab: 'finder' | 'terminal') => {
+    setState({
+      isViewerVisible: tab === 'finder',
+      isTerminalVisible: tab === 'terminal',
+    });
+    updateUrl({
+      viewer: tab === 'finder',
+      terminal: tab === 'terminal',
+    });
+  }, [updateUrl]);
+
   return (
     <TerminalContext.Provider value={{
       state,
@@ -107,6 +119,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
       setViewerVisible,
       toggleTerminal,
       toggleViewer,
+      switchToTab,
       registerExecuteCommand,
     }}>
       {children}
